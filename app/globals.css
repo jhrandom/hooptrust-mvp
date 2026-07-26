@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: #101828;
+}
+
+a {
+  text-decoration: none;
+}
+
+input,
+select,
+textarea {
+  outline: none;
+}
+
+.container-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 20px;
+}

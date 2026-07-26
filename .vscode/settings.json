@@ -1,0 +1,5 @@
+{
+  "terminal.integrated.env.osx": {
+    "PATH": "${workspaceFolder}/.tools/node/bin:${env:PATH}"
+  }
+}
