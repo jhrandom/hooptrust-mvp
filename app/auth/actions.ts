@@ -65,7 +65,10 @@ export async function signup(formData: FormData) {
     authRedirect("/signup", "error", "Complete every field and use a password of at least 8 characters.");
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://127.0.0.1:3000";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "");
+  if (!siteUrl) {
+    authRedirect("/signup", "error", "NEXT_PUBLIC_SITE_URL is not configured.");
+  }
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,

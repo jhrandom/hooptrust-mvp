@@ -26,10 +26,10 @@ npm install
 npm run dev
 ```
 
-Then open:
+Then open the URL printed by Next.js. For a deployed environment, use your public HTTPS domain.
 
 ```bash
-http://localhost:3000
+https://your-domain.example
 ```
 
 ## Environment variables
@@ -46,7 +46,7 @@ cp .env.example .env.local
 2. Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `NEXT_PUBLIC_SITE_URL` to `.env.local`.
 3. Run `npx supabase init`, `npx supabase login`, and `npx supabase link --project-ref YOUR_PROJECT_REF`.
 4. Apply the tracked schema with `npx supabase db push`.
-5. In Supabase Auth URL Configuration, set the local Site URL to `http://127.0.0.1:3000` and add `http://127.0.0.1:3000/auth/callback` as a redirect URL.
+5. In Supabase Auth URL Configuration, set the Site URL to your public domain and add `https://your-domain.example/auth/callback` as a redirect URL.
 6. Restart the development server after changing environment variables.
 
 Authentication remains in demo mode when the Supabase variables are absent. Once configured, signup, email confirmation, login, logout, SSR session refresh, and dashboard authentication activate automatically.
@@ -54,9 +54,9 @@ Authentication remains in demo mode when the Supabase variables are absent. Once
 ### Spotify setup
 
 1. Create an app in the Spotify Developer Dashboard.
-2. Register `http://127.0.0.1:3000/api/spotify/callback` as its redirect URI.
+2. Register `https://your-domain.example/api/spotify/callback` as its redirect URI.
 3. Add the client ID and secret to `.env.local`.
-4. Start the app and open `http://127.0.0.1:3000/rhythm`. Use `127.0.0.1`, not `localhost`, so the OAuth cookies and callback use the same host.
+4. Open `https://your-domain.example/rhythm`. The app derives its callback from `NEXT_PUBLIC_SITE_URL` unless `SPOTIFY_REDIRECT_URI` explicitly overrides it.
 
 The integration requests only `playlist-modify-private`. Spotify tokens are encrypted in a local ignored data file and the browser receives an opaque session cookie. A production deployment should store encrypted refresh tokens in the authenticated user's Supabase account record.
 

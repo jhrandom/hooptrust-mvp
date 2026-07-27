@@ -8,9 +8,9 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/rhythm?spotify=not-configured", request.url));
   }
 
-  // OAuth state cookies are host-bound. If the app was opened with `localhost`
-  // while Spotify redirects to `127.0.0.1`, first move the browser to the
-  // configured callback origin so the state cookie survives the round trip.
+  // OAuth state cookies are host-bound. Move the browser to the configured
+  // public callback origin before authorization so the state cookie survives
+  // the round trip when the app was opened under a different hostname.
   const callbackUrl = new URL(config.redirectUri);
   const requestHost = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
   if (requestHost && requestHost !== callbackUrl.host) {
