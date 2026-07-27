@@ -107,16 +107,16 @@ Implemented:
 - API route shells
 - Versioned Supabase migration with profile trigger and starter RLS policies
 - Supabase SSR clients, auth callback, signup, login, logout, and dashboard guards
+- Persistent player profiles, evidence and stat submissions
+- Recruiter applications, approval, search, saved players, and contact requests
+- Admin stat verification decisions with audit records
 - HoopTrust Rhythm page with situation, mood, and goal selection
 - Spotify OAuth, catalog search, explicit-content filtering, and private playlist creation
 
 Not implemented yet:
 
-- Role-based dashboard authorization beyond basic login protection
-- Real database queries
 - Real video file uploads
 - Real email notifications
-- Real recruiter approval workflow
 - Real AI stat-tracking integration
 - In-app Spotify playback and production-grade account token storage
 - Payments

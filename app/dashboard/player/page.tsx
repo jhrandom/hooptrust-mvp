@@ -20,10 +20,10 @@ export default async function PlayerDashboardPage() {
         <MetricCard label="Recruiter requests" value="1" helper="Needs response" />
       </div>
       <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Action href={`/players/${player.id}`} icon={<UserRoundCog />} title="Preview profile" body="See what approved recruiters can view." />
+        <Action href="/profile" icon={<UserRoundCog />} title="Edit profile" body="Create or update your recruiting information." />
         <Action href="/upload" icon={<UploadCloud />} title="Upload game" body="Add video link and match context." />
         <Action href="/verify-stats" icon={<BadgeCheck />} title="Verification status" body="Track pending and verified stats." />
-        <Action href="#" icon={<Mail />} title="Contact requests" body="Approve or decline recruiter requests." />
+        <Action href="/contact-requests" icon={<Mail />} title="Contact requests" body="Approve or decline recruiter requests." />
       </div>
     </main>
   );

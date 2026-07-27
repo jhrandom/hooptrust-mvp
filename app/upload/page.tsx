@@ -1,4 +1,13 @@
-export default function UploadPage() {
+import { submitEvidence } from "@/app/forms/actions";
+import { requireAuthenticatedUser } from "@/lib/auth";
+
+export default async function UploadPage({
+  searchParams
+}: {
+  searchParams: Promise<{ error?: string; message?: string }>;
+}) {
+  await requireAuthenticatedUser("/upload");
+  const params = await searchParams;
   return (
     <main className="container-page py-10">
       <div className="mx-auto max-w-3xl rounded-3xl border border-line bg-white p-8 shadow-sm">
@@ -7,38 +16,56 @@ export default function UploadPage() {
         <p className="mt-3 text-muted">
           For the MVP, video links are recommended to control hosting costs. Direct file storage can be connected later through Supabase Storage or S3.
         </p>
-        <form className="mt-8 grid gap-5">
+        {params.error ? <p className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{params.error}</p> : null}
+        {params.message ? <p className="mt-5 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-700">{params.message}</p> : null}
+        <form action={submitEvidence} className="mt-8 grid gap-5">
           <label className="grid gap-2 text-sm font-semibold text-ink">
             Video URL
-            <input className="rounded-2xl border border-line px-4 py-3 font-normal" placeholder="https://..." />
+            <input name="videoUrl" type="url" required className="rounded-2xl border border-line px-4 py-3 font-normal" placeholder="https://..." />
           </label>
           <div className="grid gap-5 md:grid-cols-2">
             <label className="grid gap-2 text-sm font-semibold text-ink">
               Game date
-              <input type="date" className="rounded-2xl border border-line px-4 py-3 font-normal" />
+              <input name="gameDate" type="date" required className="rounded-2xl border border-line px-4 py-3 font-normal" />
             </label>
             <label className="grid gap-2 text-sm font-semibold text-ink">
               Opponent
-              <input className="rounded-2xl border border-line px-4 py-3 font-normal" placeholder="KIS Dragons" />
+              <input name="opponent" required className="rounded-2xl border border-line px-4 py-3 font-normal" placeholder="KIS Dragons" />
             </label>
           </div>
           <div className="grid gap-5 md:grid-cols-2">
             <label className="grid gap-2 text-sm font-semibold text-ink">
               Tournament / league
-              <input className="rounded-2xl border border-line px-4 py-3 font-normal" placeholder="Provincial Tournament" />
+              <input name="tournament" className="rounded-2xl border border-line px-4 py-3 font-normal" placeholder="Provincial Tournament" />
             </label>
             <label className="grid gap-2 text-sm font-semibold text-ink">
               Final score
-              <input className="rounded-2xl border border-line px-4 py-3 font-normal" placeholder="68-61 W" />
+              <input name="finalScore" className="rounded-2xl border border-line px-4 py-3 font-normal" placeholder="68-61 W" />
             </label>
           </div>
           <label className="grid gap-2 text-sm font-semibold text-ink">
-            Notes for verifier
-            <textarea className="min-h-28 rounded-2xl border border-line px-4 py-3 font-normal" placeholder="Add context, jersey numbers, timestamps, or scorer notes." />
+            Location
+            <input name="location" className="rounded-2xl border border-line px-4 py-3 font-normal" placeholder="Jeju, South Korea" />
           </label>
-          <button type="button" className="rounded-full bg-court px-5 py-3 font-bold text-white">Submit for review</button>
+          <fieldset>
+            <legend className="text-sm font-semibold text-ink">Your stat line</legend>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <StatInput name="points" label="Points" />
+              <StatInput name="rebounds" label="Rebounds" />
+              <StatInput name="assists" label="Assists" />
+              <StatInput name="steals" label="Steals" />
+              <StatInput name="blocks" label="Blocks" />
+              <StatInput name="turnovers" label="Turnovers" />
+              <StatInput name="minutes" label="Minutes" />
+            </div>
+          </fieldset>
+          <button type="submit" className="rounded-full bg-court px-5 py-3 font-bold text-white">Submit for review</button>
         </form>
       </div>
     </main>
   );
+}
+
+function StatInput({ name, label }: { name: string; label: string }) {
+  return <label className="grid gap-1 text-xs font-semibold text-muted">{label}<input name={name} type="number" min="0" defaultValue="0" required className="rounded-xl border border-line px-3 py-2 text-ink" /></label>;
 }

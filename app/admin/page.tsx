@@ -1,12 +1,20 @@
 import { BadgeCheck, MailWarning, ShieldCheck, UsersRound, Video } from "lucide-react";
 import { VerificationTable } from "@/components/VerificationTable";
+import { RecruiterApprovalList } from "@/components/DecisionList";
 import { contactRequests, players, recruiters, statLines } from "@/lib/mock-data";
 import { requireProfileRole } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function AdminPage() {
   await requireProfileRole(["admin"], "/admin");
+  const supabase = await createClient();
+  const { data: pendingRecruiterRows } = await supabase
+    .from("recruiters")
+    .select("id, full_name, program, email, status")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
   const pendingStats = statLines.filter((line) => line.verificationStatus === "pending").length;
-  const pendingRecruiters = recruiters.filter((recruiter) => recruiter.status === "pending").length;
+  const pendingRecruiters = pendingRecruiterRows?.length ?? recruiters.filter((recruiter) => recruiter.status === "pending").length;
 
   return (
     <main className="container-page py-10">
@@ -31,7 +39,9 @@ export default async function AdminPage() {
           <div className="rounded-3xl border border-line bg-white p-6 shadow-sm">
             <h2 className="text-lg font-black text-ink">Recruiter approvals</h2>
             <p className="mt-2 text-sm text-muted">{pendingRecruiters} recruiter account awaiting review.</p>
-            <button className="mt-5 w-full rounded-full bg-ink px-5 py-3 font-bold text-white">Review applications</button>
+            <div className="mt-5">
+              <RecruiterApprovalList initialRows={pendingRecruiterRows ?? []} />
+            </div>
           </div>
           <div className="rounded-3xl border border-line bg-white p-6 shadow-sm">
             <h2 className="text-lg font-black text-ink">Safety reminders</h2>

@@ -1,25 +1,59 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
 
-const ContactRequestSchema = z.object({
-  recruiterId: z.string().min(1),
-  playerId: z.string().min(1),
-  message: z.string().min(10).max(1000)
+const schema = z.object({
+  playerId: z.string().uuid(),
+  message: z.string().trim().min(10).max(1000)
 });
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const parsed = ContactRequestSchema.safeParse(body);
+  const parsed = schema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "Enter a message of at least 10 characters." }, { status: 400 });
 
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid contact request", details: parsed.error.flatten() }, { status: 400 });
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const userId = claims?.claims?.sub;
+  if (!userId) return NextResponse.json({ error: "Log in to continue." }, { status: 401 });
+
+  const { data: recruiter } = await supabase
+    .from("recruiters")
+    .select("id, status")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!recruiter || recruiter.status !== "approved") {
+    return NextResponse.json({ error: "Only approved recruiters can request contact." }, { status: 403 });
   }
 
-  // TODO: Insert into Supabase contact_requests table.
-  // TODO: Notify player/guardian/admin for approval.
-  return NextResponse.json({
-    id: crypto.randomUUID(),
-    status: "pending",
-    ...parsed.data
-  });
+  const { data, error } = await supabase.from("contact_requests").insert({
+    recruiter_id: recruiter.id,
+    player_id: parsed.data.playerId,
+    message: parsed.data.message,
+    status: "pending"
+  }).select("id, status").single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  return NextResponse.json(data, { status: 201 });
+}
+
+const decisionSchema = z.object({
+  requestId: z.string().uuid(),
+  status: z.enum(["approved", "declined"])
+});
+
+export async function PATCH(request: Request) {
+  const parsed = decisionSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "Invalid decision." }, { status: 400 });
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const userId = claims?.claims?.sub;
+  if (!userId) return NextResponse.json({ error: "Log in to continue." }, { status: 401 });
+  const { data: player } = await supabase.from("players").select("id").eq("user_id", userId).maybeSingle();
+  if (!player) return NextResponse.json({ error: "Player profile required." }, { status: 403 });
+  const { data, error } = await supabase.from("contact_requests").update({
+    status: parsed.data.status,
+    decided_at: new Date().toISOString()
+  }).eq("id", parsed.data.requestId).eq("player_id", player.id).select("id").maybeSingle();
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (!data) return NextResponse.json({ error: "Request not found." }, { status: 404 });
+  return NextResponse.json({ status: parsed.data.status });
 }

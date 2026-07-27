@@ -1,0 +1,3 @@
+-- No-op compatibility migration.
+-- This version may already exist in the linked project's remote migration
+-- history, so keep the file to ensure local and remote histories stay aligned.
