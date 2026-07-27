@@ -2,6 +2,7 @@ import Link from "next/link";
 import { StatBadge } from "@/components/StatBadge";
 import { requireProfileRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { PortalBackLink } from "@/components/PortalBackLink";
 
 export default async function SubmissionsPage() {
   const auth = await requireProfileRole(["player", "guardian"], "/submissions");
@@ -13,6 +14,7 @@ export default async function SubmissionsPage() {
 
   return (
     <main className="container-page py-10">
+      <PortalBackLink />
       <h1 className="text-3xl font-black text-ink">Submission status</h1>
       <p className="mt-2 text-muted">Track the statistics you have submitted for verification.</p>
       <div className="mt-8 space-y-4">

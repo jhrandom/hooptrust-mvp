@@ -1,11 +1,13 @@
 import { Headphones, Music2, Sparkles } from "lucide-react";
 import { RhythmPlanner } from "@/components/RhythmPlanner";
+import { PortalBackLink } from "@/components/PortalBackLink";
 
 export default function RhythmPage() {
   return (
     <main>
       <section className="bg-gradient-to-br from-white via-green-50 to-orange-50 py-16">
         <div className="container-page">
+          <PortalBackLink />
           <span className="inline-flex items-center gap-2 rounded-full border border-green-200 bg-white px-4 py-2 text-sm font-semibold text-green-700">
             <Headphones size={16} /> HoopTrust Rhythm · Spotify integration
           </span>

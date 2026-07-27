@@ -7,6 +7,7 @@ import { StatBadge } from "@/components/StatBadge";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import { games as sampleGames, getPlayerStats, players as samplePlayers, statLines as sampleStatLines } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/server";
+import { PortalBackLink } from "@/components/PortalBackLink";
 
 export default async function PlayerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -31,9 +32,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
 
   return (
     <main className="container-page py-10">
-      <Link href="/dashboard/recruiter" className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink">
-        <ArrowLeft size={16} /> Back to search
-      </Link>
+      <PortalBackLink />
       <section className="mt-6 overflow-hidden rounded-[2rem] border border-line bg-white shadow-sm">
         <div className="bg-gradient-to-br from-ink to-slate-700 p-8 text-white">
           <p className="text-sm font-semibold uppercase tracking-wide text-orange-200">Recruiting profile</p>

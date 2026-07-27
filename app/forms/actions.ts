@@ -8,6 +8,12 @@ import { createClient } from "@/lib/supabase/server";
 const optionalText = (max: number) =>
   z.preprocess((value) => value === "" ? null : value, z.string().trim().max(max).nullable());
 
+const optionalStat = (max: number) =>
+  z.preprocess(
+    (value) => value === "" || value === null ? null : value,
+    z.coerce.number().int().min(0).max(max).nullable()
+  );
+
 const playerSchema = z.object({
   fullName: z.string().trim().min(2).max(100),
   preferredName: optionalText(50),
@@ -16,10 +22,10 @@ const playerSchema = z.object({
   city: optionalText(80),
   graduationYear: z.coerce.number().int().min(2020).max(2040).nullable(),
   birthYear: z.coerce.number().int().min(1980).max(new Date().getFullYear()).nullable(),
-  position: optionalText(40),
+  position: z.string().trim().min(1).max(40),
   height: optionalText(30),
   weight: optionalText(30),
-  dominantHand: optionalText(20),
+  dominantHand: z.enum(["Right", "Left", "Both"]),
   currentTeam: optionalText(120),
   jerseyNumber: z.coerce.number().int().min(0).max(999).nullable(),
   bio: optionalText(1000),
@@ -36,13 +42,19 @@ const evidenceSchema = z.object({
   location: optionalText(150),
   tournament: optionalText(150),
   finalScore: optionalText(40),
-  points: z.coerce.number().int().min(0).max(300),
-  rebounds: z.coerce.number().int().min(0).max(100),
-  assists: z.coerce.number().int().min(0).max(100),
-  steals: z.coerce.number().int().min(0).max(100),
-  blocks: z.coerce.number().int().min(0).max(100),
-  turnovers: z.coerce.number().int().min(0).max(100),
-  minutes: z.coerce.number().min(0).max(200)
+  points: optionalStat(300),
+  rebounds: optionalStat(100),
+  assists: optionalStat(100),
+  steals: optionalStat(100),
+  blocks: optionalStat(100),
+  turnovers: optionalStat(100),
+  minutes: optionalStat(200),
+  fga: optionalStat(300),
+  fgm: optionalStat(300),
+  tpa: optionalStat(300),
+  tpm: optionalStat(300),
+  fta: optionalStat(300),
+  ftm: optionalStat(300)
 });
 
 const recruiterSchema = z.object({
@@ -89,7 +101,7 @@ export async function savePlayerProfile(formData: FormData) {
     city: value(formData, "city"),
     graduationYear: optionalNumberValue(formData, "graduationYear"),
     birthYear: optionalNumberValue(formData, "birthYear"),
-    position: value(formData, "position"),
+    position: formData.getAll("position").map(String).join(" / "),
     height: value(formData, "height"),
     weight: value(formData, "weight"),
     dominantHand: value(formData, "dominantHand"),
@@ -148,7 +160,13 @@ export async function submitEvidence(formData: FormData) {
     steals: value(formData, "steals"),
     blocks: value(formData, "blocks"),
     turnovers: value(formData, "turnovers"),
-    minutes: value(formData, "minutes")
+    minutes: value(formData, "minutes"),
+    fga: value(formData, "fga"),
+    fgm: value(formData, "fgm"),
+    tpa: value(formData, "tpa"),
+    tpm: value(formData, "tpm"),
+    fta: value(formData, "fta"),
+    ftm: value(formData, "ftm")
   });
   if (!parsed.success) withNotice("/upload", "error", "Enter a valid video URL, date, and opponent.");
 
@@ -187,6 +205,12 @@ export async function submitEvidence(formData: FormData) {
     blocks: parsed.data.blocks,
     turnovers: parsed.data.turnovers,
     minutes: parsed.data.minutes,
+    fga: parsed.data.fga,
+    fgm: parsed.data.fgm,
+    tpa: parsed.data.tpa,
+    tpm: parsed.data.tpm,
+    fta: parsed.data.fta,
+    ftm: parsed.data.ftm,
     source: "manual",
     verification_status: "pending",
     confidence: "Medium"

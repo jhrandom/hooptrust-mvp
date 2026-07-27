@@ -1,6 +1,7 @@
 import { StatReviewTable } from "@/components/StatReviewTable";
 import { requireProfileRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { PortalBackLink } from "@/components/PortalBackLink";
 
 export default async function VerifyStatsPage() {
   await requireProfileRole(["admin"], "/verify-stats");
@@ -12,6 +13,7 @@ export default async function VerifyStatsPage() {
 
   return (
     <main className="container-page py-10">
+      <PortalBackLink />
       <p className="text-sm font-bold uppercase tracking-wide text-court">Trust layer</p>
       <h1 className="mt-2 text-3xl font-black text-ink">Stat verification queue</h1>
       <p className="mt-2 max-w-3xl text-muted">Review submitted statistics against their evidence and save an auditable decision.</p>

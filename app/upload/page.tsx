@@ -1,5 +1,6 @@
 import { submitEvidence } from "@/app/forms/actions";
 import { requireAuthenticatedUser } from "@/lib/auth";
+import { PortalBackLink } from "@/components/PortalBackLink";
 
 export default async function UploadPage({
   searchParams
@@ -10,6 +11,7 @@ export default async function UploadPage({
   const params = await searchParams;
   return (
     <main className="container-page py-10">
+      <PortalBackLink />
       <div className="mx-auto max-w-3xl rounded-3xl border border-line bg-white p-8 shadow-sm">
         <p className="text-sm font-bold uppercase tracking-wide text-court">Evidence upload</p>
         <h1 className="mt-2 text-3xl font-black text-ink">Add a game video or link</h1>
@@ -35,7 +37,7 @@ export default async function UploadPage({
           </div>
           <div className="grid gap-5 md:grid-cols-2">
             <label className="grid gap-2 text-sm font-semibold text-ink">
-              Tournament / league
+              Tournament / League
               <input name="tournament" className="rounded-2xl border border-line px-4 py-3 font-normal" placeholder="Provincial Tournament" />
             </label>
             <label className="grid gap-2 text-sm font-semibold text-ink">
@@ -57,7 +59,16 @@ export default async function UploadPage({
               <StatInput name="blocks" label="Blocks" />
               <StatInput name="turnovers" label="Turnovers" />
               <StatInput name="minutes" label="Minutes" />
+              <StatInput name="fga" label="Field goal attempts" />
+              <StatInput name="fgm" label="Field goals made" />
+              <StatInput name="tpa" label="Three-point attempts" />
+              <StatInput name="tpm" label="Three-pointers made" />
+              <StatInput name="fta" label="Free throw attempts" />
+              <StatInput name="ftm" label="Free throws made" />
             </div>
+            <p className="mt-3 text-sm text-muted">
+              Not sure about your exact stat? Leave the box empty, and we will check it for you.
+            </p>
           </fieldset>
           <button type="submit" className="rounded-full bg-court px-5 py-3 font-bold text-white">Submit for review</button>
         </form>
@@ -67,5 +78,5 @@ export default async function UploadPage({
 }
 
 function StatInput({ name, label }: { name: string; label: string }) {
-  return <label className="grid gap-1 text-xs font-semibold text-muted">{label}<input name={name} type="number" min="0" defaultValue="0" required className="rounded-xl border border-line px-3 py-2 text-ink" /></label>;
+  return <label className="grid gap-1 text-xs font-semibold text-muted">{label}<input name={name} type="number" min="0" className="rounded-xl border border-line px-3 py-2 text-ink" /></label>;
 }

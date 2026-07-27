@@ -3,8 +3,26 @@ import { ArrowRight, BadgeCheck, Globe2, Headphones, Search, UploadCloud } from 
 import { MetricCard } from "@/components/MetricCard";
 import { PlayerCard } from "@/components/PlayerCard";
 import { players } from "@/lib/mock-data";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { createClient } from "@/lib/supabase/server";
 
-export default function HomePage() {
+export default async function HomePage() {
+  let primaryAction = { href: "/signup", label: "Start beta profile" };
+  if (isSupabaseConfigured()) {
+    const supabase = await createClient();
+    const { data: claims } = await supabase.auth.getClaims();
+    const userId = claims?.claims?.sub;
+    if (userId) {
+      const { data: profile } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
+      primaryAction =
+        profile?.role === "recruiter"
+          ? { href: "/dashboard/recruiter", label: "Go to recruiter portal" }
+          : profile?.role === "admin"
+            ? { href: "/admin", label: "Go to admin portal" }
+            : { href: "/dashboard/player", label: "Go to player portal" };
+    }
+  }
+
   return (
     <main>
       <section className="bg-gradient-to-br from-white via-orange-50 to-teal-50 py-20">
@@ -21,8 +39,8 @@ export default function HomePage() {
               video evidence, and recruiter-ready player profiles.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/signup" className="inline-flex items-center gap-2 rounded-full bg-court px-6 py-3 font-bold text-white shadow-sm">
-                Start beta profile <ArrowRight size={18} />
+              <Link href={primaryAction.href} className="inline-flex items-center gap-2 rounded-full bg-court px-6 py-3 font-bold text-white shadow-sm">
+                {primaryAction.label} <ArrowRight size={18} />
               </Link>
               <Link href="/dashboard/recruiter" className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-6 py-3 font-bold text-ink">
                 View recruiter portal

@@ -1,6 +1,7 @@
 import { savePlayerProfile } from "@/app/forms/actions";
 import { requireProfileRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { PortalBackLink } from "@/components/PortalBackLink";
 
 export default async function ProfilePage({
   searchParams
@@ -18,6 +19,7 @@ export default async function ProfilePage({
 
   return (
     <main className="container-page py-10">
+      <PortalBackLink />
       <div className="mx-auto max-w-4xl rounded-3xl border border-line bg-white p-8 shadow-sm">
         <p className="text-sm font-bold uppercase tracking-wide text-court">Player profile</p>
         <h1 className="mt-2 text-3xl font-black text-ink">Build your recruiting profile</h1>
@@ -32,10 +34,34 @@ export default async function ProfilePage({
           <Field label="City" name="city" defaultValue={profile?.city} />
           <Field label="Graduation year" name="graduationYear" type="number" defaultValue={profile?.graduation_year} />
           <Field label="Birth year" name="birthYear" type="number" defaultValue={profile?.birth_year} />
-          <Field label="Position" name="position" placeholder="PG / SG" defaultValue={profile?.position} />
+          <fieldset className="md:col-span-2">
+            <legend className="text-sm font-semibold text-ink">
+              Position <RequiredMark />
+            </legend>
+            <p className="mt-1 text-xs text-muted">Select every position you play.</p>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+              {["PG", "SG", "SF", "PF", "C"].map((position) => {
+                const selectedPositions = String(profile?.position ?? "").split("/").map((item) => item.trim());
+                return (
+                  <label key={position} className="flex cursor-pointer items-center gap-3 rounded-2xl border border-line px-4 py-3 font-bold text-ink transition has-[:checked]:border-court has-[:checked]:bg-orange-50">
+                    <input name="position" type="checkbox" value={position} defaultChecked={selectedPositions.includes(position)} className="h-4 w-4 accent-orange-600" />
+                    {position}
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
           <Field label="Height" name="height" placeholder={'6\'1"'} defaultValue={profile?.height} />
           <Field label="Weight" name="weight" placeholder="165 lb" defaultValue={profile?.weight} />
-          <Field label="Dominant hand" name="dominantHand" defaultValue={profile?.dominant_hand} />
+          <label className="grid gap-2 text-sm font-semibold text-ink">
+            <span>Dominant hand <RequiredMark /></span>
+            <select name="dominantHand" required defaultValue={profile?.dominant_hand ?? ""} className="rounded-2xl border border-line px-4 py-3 font-normal">
+              <option value="" disabled>Select dominant hand</option>
+              <option value="Right">Right</option>
+              <option value="Left">Left</option>
+              <option value="Both">Both / Ambidextrous</option>
+            </select>
+          </label>
           <Field label="Jersey number" name="jerseyNumber" type="number" defaultValue={profile?.jersey_number} />
           <Field label="GPA" name="gpa" defaultValue={profile?.gpa} />
           <Field label="Intended major" name="intendedMajor" defaultValue={profile?.intended_major} />
@@ -71,10 +97,14 @@ function Field({ label, name, type = "text", defaultValue, placeholder, required
 }) {
   return (
     <label className="grid gap-2 text-sm font-semibold text-ink">
-      {label}
+      <span>{label} {required ? <RequiredMark /> : null}</span>
       <input name={name} type={type} required={required} defaultValue={defaultValue ?? ""} placeholder={placeholder} className="rounded-2xl border border-line px-4 py-3 font-normal" />
     </label>
   );
+}
+
+function RequiredMark() {
+  return <span className="text-red-600" aria-label="required">*</span>;
 }
 
 function Notice({ error, message }: { error?: string; message?: string }) {
