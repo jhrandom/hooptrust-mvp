@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { recordAdminAction } from "@/lib/admin-audit";
 
 const schema = z.object({
   videoId: z.string().uuid(),
@@ -35,5 +36,8 @@ export async function PATCH(request: Request) {
     if (gameError) return NextResponse.json({ error: gameError.message }, { status: 400 });
   }
 
+  await recordAdminAction(supabase, userId, `evidence_${parsed.data.status}`, "video", video.id, {
+    game_id: video.game_id
+  });
   return NextResponse.json({ status: parsed.data.status });
 }

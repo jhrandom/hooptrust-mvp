@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { recordAdminAction } from "@/lib/admin-audit";
 
 const schema = z.object({
   statId: z.string().uuid(),
@@ -35,5 +36,9 @@ export async function POST(request: Request) {
     admin_notes: parsed.data.verifierNote || null
   });
   if (recordError) return NextResponse.json({ error: recordError.message }, { status: 400 });
+  await recordAdminAction(supabase, userId, `stat_${parsed.data.status}`, "stat", parsed.data.statId, {
+    confidence: parsed.data.confidence,
+    note: parsed.data.verifierNote
+  });
   return NextResponse.json({ status: parsed.data.status });
 }
