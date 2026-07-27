@@ -49,6 +49,18 @@ export async function PATCH(request: Request) {
   if (!userId) return NextResponse.json({ error: "Log in to continue." }, { status: 401 });
   const { data: player } = await supabase.from("players").select("id").eq("user_id", userId).maybeSingle();
   if (!player) return NextResponse.json({ error: "Player profile required." }, { status: 403 });
+  if (parsed.data.status === "approved") {
+    const { data: designatedContact } = await supabase
+      .from("player_contact_details")
+      .select("player_id, consent_confirmed_at")
+      .eq("player_id", player.id)
+      .maybeSingle();
+    if (!designatedContact?.consent_confirmed_at) {
+      return NextResponse.json({
+        error: "Add a designated contact and confirm sharing permission in your player profile before approving this request."
+      }, { status: 409 });
+    }
+  }
   const { data, error } = await supabase.from("contact_requests").update({
     status: parsed.data.status,
     decided_at: new Date().toISOString()

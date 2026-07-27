@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Mail, Search } from "lucide-react";
 import { submitRecruiterApplication } from "@/app/forms/actions";
 import { requireProfileRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -53,8 +53,15 @@ export default async function RecruiterDashboardPage({
 
   return (
     <main className="container-page py-10">
-      <p className="text-sm font-bold uppercase tracking-wide text-court">Approved recruiter portal</p>
-      <h1 className="mt-2 text-3xl font-black text-ink">Discover international players</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-sm font-bold uppercase tracking-wide text-court">Approved recruiter portal</p>
+          <h1 className="mt-2 text-3xl font-black text-ink">Discover international players</h1>
+        </div>
+        <Link href="/recruiter/requests" className="inline-flex items-center gap-2 rounded-full bg-court px-5 py-3 font-bold text-white">
+          <Mail size={18} /> Contact requests
+        </Link>
+      </div>
       <Notice error={params.error ?? error?.message} message={params.message} />
       <form className="mt-8 rounded-3xl border border-line bg-white p-5 shadow-sm">
         <div className="grid gap-3 md:grid-cols-[1.2fr_repeat(3,1fr)_auto]">

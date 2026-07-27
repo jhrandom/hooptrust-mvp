@@ -16,6 +16,9 @@ export default async function ProfilePage({
     .select("*")
     .eq("user_id", auth!.userId)
     .maybeSingle();
+  const { data: contact } = profile
+    ? await supabase.from("player_contact_details").select("*").eq("player_id", profile.id).maybeSingle()
+    : { data: null };
 
   return (
     <main className="container-page py-10">
@@ -28,12 +31,12 @@ export default async function ProfilePage({
         <form action={savePlayerProfile} className="mt-8 grid gap-5 md:grid-cols-2">
           <Field label="Full name" name="fullName" required defaultValue={profile?.full_name} />
           <Field label="Preferred name" name="preferredName" defaultValue={profile?.preferred_name} />
-          <Field label="School" name="school" defaultValue={profile?.school} />
+          <Field label="School" name="school" required defaultValue={profile?.school} />
           <Field label="Current team" name="currentTeam" defaultValue={profile?.current_team} />
-          <Field label="Country" name="country" defaultValue={profile?.country} />
+          <Field label="Country" name="country" required defaultValue={profile?.country} />
           <Field label="City" name="city" defaultValue={profile?.city} />
-          <Field label="Graduation year" name="graduationYear" type="number" defaultValue={profile?.graduation_year} />
-          <Field label="Birth year" name="birthYear" type="number" defaultValue={profile?.birth_year} />
+          <Field label="Graduation year" name="graduationYear" type="number" required defaultValue={profile?.graduation_year} />
+          <Field label="Birth year" name="birthYear" type="number" required defaultValue={profile?.birth_year} />
           <fieldset className="md:col-span-2">
             <legend className="text-sm font-semibold text-ink">
               Position <RequiredMark />
@@ -51,8 +54,8 @@ export default async function ProfilePage({
               })}
             </div>
           </fieldset>
-          <Field label="Height" name="height" placeholder={'6\'1"'} defaultValue={profile?.height} />
-          <Field label="Weight" name="weight" placeholder="165 lb" defaultValue={profile?.weight} />
+          <Field label="Height" name="height" required placeholder={'6\'1"'} defaultValue={profile?.height} />
+          <Field label="Weight" name="weight" required placeholder="165 lb" defaultValue={profile?.weight} />
           <label className="grid gap-2 text-sm font-semibold text-ink">
             <span>Dominant hand <RequiredMark /></span>
             <select name="dominantHand" required defaultValue={profile?.dominant_hand ?? ""} className="rounded-2xl border border-line px-4 py-3 font-normal">
@@ -83,7 +86,23 @@ export default async function ProfilePage({
               <option value="public">Public</option>
             </select>
           </label>
-          <div className="flex items-end">
+          <section className="rounded-3xl border border-line bg-slate-50 p-5 md:col-span-2">
+            <h2 className="text-lg font-black text-ink">Designated contact for approved recruiters</h2>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              For minor athletes, use a parent, guardian, coach, or authorized representative. These details stay private unless you approve a recruiter’s request.
+            </p>
+            <div className="mt-5 grid gap-5 md:grid-cols-2">
+              <Field label="Contact name" name="contactName" defaultValue={contact?.contact_name} />
+              <Field label="Relationship to player" name="relationship" placeholder="Parent / Guardian" defaultValue={contact?.relationship} />
+              <Field label="Contact email" name="contactEmail" type="email" defaultValue={contact?.email} />
+              <Field label="Contact phone (optional)" name="contactPhone" type="tel" defaultValue={contact?.phone} />
+            </div>
+            <label className="mt-5 flex items-start gap-3 rounded-2xl border border-orange-200 bg-white p-4 text-sm leading-6 text-ink">
+              <input name="consentToShare" type="checkbox" defaultChecked={Boolean(contact?.consent_confirmed_at)} className="mt-1 h-4 w-4 accent-orange-600" />
+              <span>I confirm that this contact has permission to be shared only with recruiters whose contact request I explicitly approve.</span>
+            </label>
+          </section>
+          <div className="flex items-end md:col-span-2">
             <button type="submit" className="w-full rounded-full bg-court px-5 py-3 font-bold text-white">Save profile</button>
           </div>
         </form>

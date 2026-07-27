@@ -17,14 +17,14 @@ const optionalStat = (max: number) =>
 const playerSchema = z.object({
   fullName: z.string().trim().min(2).max(100),
   preferredName: optionalText(50),
-  school: optionalText(120),
-  country: optionalText(80),
+  school: z.string().trim().min(2).max(120),
+  country: z.string().trim().min(2).max(80),
   city: optionalText(80),
-  graduationYear: z.coerce.number().int().min(2020).max(2040).nullable(),
-  birthYear: z.coerce.number().int().min(1980).max(new Date().getFullYear()).nullable(),
+  graduationYear: z.coerce.number().int().min(2020).max(2040),
+  birthYear: z.coerce.number().int().min(1980).max(new Date().getFullYear()),
   position: z.string().trim().min(1).max(40),
-  height: optionalText(30),
-  weight: optionalText(30),
+  height: z.string().trim().min(1).max(30),
+  weight: z.string().trim().min(1).max(30),
   dominantHand: z.enum(["Right", "Left", "Both"]),
   currentTeam: optionalText(120),
   jerseyNumber: z.coerce.number().int().min(0).max(999).nullable(),
@@ -38,10 +38,11 @@ const playerSchema = z.object({
 const evidenceSchema = z.object({
   videoUrl: z.string().url().max(2000),
   gameDate: z.string().date(),
-  opponent: z.string().trim().min(2).max(120),
+  opponent: optionalText(120),
   location: optionalText(150),
   tournament: optionalText(150),
   finalScore: optionalText(40),
+  jerseyNumber: z.coerce.number().int().min(0).max(999),
   points: optionalStat(300),
   rebounds: optionalStat(100),
   assists: optionalStat(100),
@@ -62,6 +63,13 @@ const recruiterSchema = z.object({
   program: z.string().trim().min(2).max(150),
   title: optionalText(100),
   email: z.string().email().max(320)
+});
+
+const contactDetailsSchema = z.object({
+  contactName: z.string().trim().min(2).max(100),
+  relationship: z.string().trim().min(2).max(60),
+  contactEmail: z.string().email().max(320),
+  contactPhone: optionalText(50)
 });
 
 function value(formData: FormData, key: string) {
@@ -117,7 +125,7 @@ export async function savePlayerProfile(formData: FormData) {
 
   const { supabase, userId } = await requireRole(["player", "guardian"]);
   const profile = parsed.data;
-  const { error } = await supabase.from("players").upsert({
+  const { data: savedPlayer, error } = await supabase.from("players").upsert({
     user_id: userId,
     full_name: profile.fullName,
     preferred_name: profile.preferredName,
@@ -138,9 +146,34 @@ export async function savePlayerProfile(formData: FormData) {
     recruiting_status: profile.recruitingStatus,
     visibility: profile.visibility,
     updated_at: new Date().toISOString()
-  }, { onConflict: "user_id" });
+  }, { onConflict: "user_id" }).select("id").single();
 
   if (error) withNotice("/profile", "error", error.message);
+  const consentToShare = formData.get("consentToShare") === "on";
+  if (consentToShare) {
+    const contact = contactDetailsSchema.safeParse({
+      contactName: value(formData, "contactName"),
+      relationship: value(formData, "relationship"),
+      contactEmail: value(formData, "contactEmail"),
+      contactPhone: value(formData, "contactPhone")
+    });
+    if (!contact.success) {
+      withNotice("/profile", "error", "Complete the designated contact name, relationship, and valid email before enabling contact sharing.");
+    }
+    const { error: contactError } = await supabase.from("player_contact_details").upsert({
+      player_id: savedPlayer.id,
+      contact_name: contact.data.contactName,
+      relationship: contact.data.relationship,
+      email: contact.data.contactEmail,
+      phone: contact.data.contactPhone,
+      consent_confirmed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+    if (contactError) withNotice("/profile", "error", contactError.message);
+  } else {
+    const { error: contactError } = await supabase.from("player_contact_details").delete().eq("player_id", savedPlayer.id);
+    if (contactError) withNotice("/profile", "error", contactError.message);
+  }
   revalidatePath("/profile");
   revalidatePath("/dashboard/player");
   withNotice("/profile", "message", "Player profile saved.");
@@ -154,6 +187,7 @@ export async function submitEvidence(formData: FormData) {
     location: value(formData, "location"),
     tournament: value(formData, "tournament"),
     finalScore: value(formData, "finalScore"),
+    jerseyNumber: value(formData, "jerseyNumber"),
     points: value(formData, "points"),
     rebounds: value(formData, "rebounds"),
     assists: value(formData, "assists"),
@@ -168,7 +202,7 @@ export async function submitEvidence(formData: FormData) {
     fta: value(formData, "fta"),
     ftm: value(formData, "ftm")
   });
-  if (!parsed.success) withNotice("/upload", "error", "Enter a valid video URL, date, and opponent.");
+  if (!parsed.success) withNotice("/upload", "error", "Enter a valid video URL, game date, and jersey number.");
 
   const { supabase, userId } = await requireRole(["player", "guardian"]);
   const { data: player } = await supabase.from("players").select("id").eq("user_id", userId).maybeSingle();
@@ -189,6 +223,7 @@ export async function submitEvidence(formData: FormData) {
     uploaded_by: userId,
     player_id: player.id,
     game_id: game.id,
+    jersey_number: parsed.data.jerseyNumber,
     video_url: parsed.data.videoUrl,
     visibility: "private",
     approval_status: "pending"

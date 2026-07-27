@@ -32,7 +32,7 @@ export default async function UploadPage({
             </label>
             <label className="grid gap-2 text-sm font-semibold text-ink">
               Opponent
-              <input name="opponent" required className="rounded-2xl border border-line px-4 py-3 font-normal" placeholder="KIS Dragons" />
+              <input name="opponent" className="rounded-2xl border border-line px-4 py-3 font-normal" placeholder="KIS Dragons" />
             </label>
           </div>
           <div className="grid gap-5 md:grid-cols-2">
@@ -49,6 +49,10 @@ export default async function UploadPage({
             Location
             <input name="location" className="rounded-2xl border border-line px-4 py-3 font-normal" placeholder="Jeju, South Korea" />
           </label>
+          <label className="grid gap-2 text-sm font-semibold text-ink">
+            <span>Player&apos;s jersey number <span className="text-red-600" aria-label="required">*</span></span>
+            <input name="jerseyNumber" type="number" min="0" max="999" required className="rounded-2xl border border-line px-4 py-3 font-normal" placeholder="11" />
+          </label>
           <fieldset>
             <legend className="text-sm font-semibold text-ink">Your stat line</legend>
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -58,13 +62,13 @@ export default async function UploadPage({
               <StatInput name="steals" label="Steals" />
               <StatInput name="blocks" label="Blocks" />
               <StatInput name="turnovers" label="Turnovers" />
-              <StatInput name="minutes" label="Minutes" />
               <StatInput name="fga" label="Field goal attempts" />
               <StatInput name="fgm" label="Field goals made" />
               <StatInput name="tpa" label="Three-point attempts" />
               <StatInput name="tpm" label="Three-pointers made" />
               <StatInput name="fta" label="Free throw attempts" />
               <StatInput name="ftm" label="Free throws made" />
+              <StatInput name="minutes" label="Minutes" />
             </div>
             <p className="mt-3 text-sm text-muted">
               Not sure about your exact stat? Leave the box empty, and we will check it for you.
