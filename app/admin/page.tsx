@@ -4,6 +4,7 @@ import { RecruiterApprovalList } from "@/components/DecisionList";
 import { contactRequests, players, recruiters, statLines } from "@/lib/mock-data";
 import { requireProfileRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { EvidenceReviewList, type EvidenceRow } from "@/components/EvidenceReviewList";
 
 export default async function AdminPage() {
   await requireProfileRole(["admin"], "/admin");
@@ -13,6 +14,10 @@ export default async function AdminPage() {
     .select("id, full_name, program, email, status")
     .eq("status", "pending")
     .order("created_at", { ascending: true });
+  const { data: evidenceRows, error: evidenceError } = await supabase
+    .from("videos")
+    .select("id, video_url, approval_status, created_at, players(full_name), games(opponent, game_date, tournament)")
+    .order("created_at", { ascending: false });
   const pendingStats = statLines.filter((line) => line.verificationStatus === "pending").length;
   const pendingRecruiters = pendingRecruiterRows?.length ?? recruiters.filter((recruiter) => recruiter.status === "pending").length;
 
@@ -27,7 +32,17 @@ export default async function AdminPage() {
         <AdminMetric icon={<ShieldCheck />} label="Recruiters" value={recruiters.length} />
         <AdminMetric icon={<BadgeCheck />} label="Pending stats" value={pendingStats} />
         <AdminMetric icon={<MailWarning />} label="Contact requests" value={contactRequests.length} />
-        <AdminMetric icon={<Video />} label="Videos" value="2" />
+        <AdminMetric icon={<Video />} label="Videos" value={evidenceRows?.length ?? 0} />
+      </section>
+
+      <section className="mt-8">
+        <h2 className="mb-4 text-xl font-black text-ink">Video evidence queue</h2>
+        {evidenceError ? <p className="mb-4 rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-700">{evidenceError.message}</p> : null}
+        <EvidenceReviewList initialRows={(evidenceRows ?? []).map((row) => ({
+          ...row,
+          players: Array.isArray(row.players) ? row.players[0] ?? null : row.players,
+          games: Array.isArray(row.games) ? row.games[0] ?? null : row.games
+        })) as EvidenceRow[]} />
       </section>
 
       <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
