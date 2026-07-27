@@ -1,8 +1,10 @@
 import { Search } from "lucide-react";
 import { PlayerCard } from "@/components/PlayerCard";
 import { players } from "@/lib/mock-data";
+import { requireAuthenticatedUser } from "@/lib/auth";
 
-export default function RecruiterDashboardPage() {
+export default async function RecruiterDashboardPage() {
+  await requireAuthenticatedUser("/dashboard/recruiter");
   return (
     <main className="container-page py-10">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">

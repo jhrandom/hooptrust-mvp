@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
+import { logout } from "@/app/auth/actions";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { createClient } from "@/lib/supabase/server";
 
 const navItems = [
   { href: "/players/tyler-kim", label: "Sample Profile" },
@@ -9,7 +12,14 @@ const navItems = [
   { href: "/admin", label: "Admin" }
 ];
 
-export function Header() {
+export async function Header() {
+  let signedIn = false;
+  if (isSupabaseConfigured()) {
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getClaims();
+    signedIn = Boolean(data?.claims);
+  }
+
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-white/90 backdrop-blur">
       <div className="container-page flex h-16 items-center justify-between">
@@ -26,12 +36,17 @@ export function Header() {
             </Link>
           ))}
         </nav>
-        <Link
-          href="/signup"
-          className="rounded-full bg-court px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
-        >
-          Join Beta
-        </Link>
+        {signedIn ? (
+          <form action={logout}>
+            <button type="submit" className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90">
+              Log out
+            </button>
+          </form>
+        ) : (
+          <Link href="/signup" className="rounded-full bg-court px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90">
+            Join Beta
+          </Link>
+        )}
       </div>
     </header>
   );

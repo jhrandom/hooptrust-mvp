@@ -1,8 +1,10 @@
 import { BadgeCheck, MailWarning, ShieldCheck, UsersRound, Video } from "lucide-react";
 import { VerificationTable } from "@/components/VerificationTable";
 import { contactRequests, players, recruiters, statLines } from "@/lib/mock-data";
+import { requireProfileRole } from "@/lib/auth";
 
-export default function AdminPage() {
+export default async function AdminPage() {
+  await requireProfileRole(["admin"], "/admin");
   const pendingStats = statLines.filter((line) => line.verificationStatus === "pending").length;
   const pendingRecruiters = recruiters.filter((recruiter) => recruiter.status === "pending").length;
 

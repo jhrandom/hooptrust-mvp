@@ -2,8 +2,10 @@ import Link from "next/link";
 import { UploadCloud, UserRoundCog, BadgeCheck, Mail } from "lucide-react";
 import { MetricCard } from "@/components/MetricCard";
 import { getPlayerStats, players } from "@/lib/mock-data";
+import { requireAuthenticatedUser } from "@/lib/auth";
 
-export default function PlayerDashboardPage() {
+export default async function PlayerDashboardPage() {
+  await requireAuthenticatedUser("/dashboard/player");
   const player = players[0];
   const stats = getPlayerStats(player.id);
 

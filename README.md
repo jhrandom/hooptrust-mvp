@@ -40,6 +40,17 @@ Copy `.env.example` to `.env.local` and add Supabase credentials when you are re
 cp .env.example .env.local
 ```
 
+### Supabase setup
+
+1. Create a Supabase project and copy its Project URL and publishable key.
+2. Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `NEXT_PUBLIC_SITE_URL` to `.env.local`.
+3. Run `npx supabase init`, `npx supabase login`, and `npx supabase link --project-ref YOUR_PROJECT_REF`.
+4. Apply the tracked schema with `npx supabase db push`.
+5. In Supabase Auth URL Configuration, set the local Site URL to `http://127.0.0.1:3000` and add `http://127.0.0.1:3000/auth/callback` as a redirect URL.
+6. Restart the development server after changing environment variables.
+
+Authentication remains in demo mode when the Supabase variables are absent. Once configured, signup, email confirmation, login, logout, SSR session refresh, and dashboard authentication activate automatically.
+
 ### Spotify setup
 
 1. Create an app in the Spotify Developer Dashboard.
@@ -47,13 +58,13 @@ cp .env.example .env.local
 3. Add the client ID and secret to `.env.local`.
 4. Start the app and open `http://127.0.0.1:3000/rhythm`. Use `127.0.0.1`, not `localhost`, so the OAuth cookies and callback use the same host.
 
-The integration requests only `playlist-modify-private`. Spotify tokens are encrypted in an HTTP-only cookie for this prototype. A production deployment should store encrypted refresh tokens in the authenticated user's server-side account record.
+The integration requests only `playlist-modify-private`. Spotify tokens are encrypted in a local ignored data file and the browser receives an opaque session cookie. A production deployment should store encrypted refresh tokens in the authenticated user's Supabase account record.
 
 ## Important pages
 
 - `/` — Landing page
-- `/signup` — Beta signup shell
-- `/login` — Login shell
+- `/signup` — Supabase account signup
+- `/login` — Supabase account login
 - `/dashboard/player` — Player dashboard
 - `/dashboard/recruiter` — Recruiter search portal
 - `/rhythm` — HoopTrust Rhythm private Spotify playlist builder
@@ -68,7 +79,7 @@ The integration requests only `playlist-modify-private`. Spotify tokens are encr
 app/                  Next.js routes and screens
 components/           Reusable UI components
 lib/                  Types, utilities, mock data, Supabase client shell
-db/schema.sql         Supabase/Postgres schema draft
+supabase/migrations/  Versioned Supabase/Postgres schema
 docs/                 Build plan, API contract, user flows
 ```
 
@@ -84,13 +95,14 @@ Implemented:
 - Recruiter search page
 - Admin dashboard
 - API route shells
-- Supabase schema draft
+- Versioned Supabase migration with profile trigger and starter RLS policies
+- Supabase SSR clients, auth callback, signup, login, logout, and dashboard guards
 - HoopTrust Rhythm page with situation, mood, and goal selection
 - Spotify OAuth, catalog search, explicit-content filtering, and private playlist creation
 
 Not implemented yet:
 
-- Real authentication
+- Role-based dashboard authorization beyond basic login protection
 - Real database queries
 - Real video file uploads
 - Real email notifications
@@ -101,7 +113,7 @@ Not implemented yet:
 
 ## Recommended next build step
 
-Connect Supabase Auth and replace `lib/mock-data.ts` with database reads from Supabase tables.
+Apply the Supabase migration, then replace `lib/mock-data.ts` with authenticated database reads.
 
 ## Safety notes
 
