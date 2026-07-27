@@ -223,7 +223,6 @@ export async function submitEvidence(formData: FormData) {
     uploaded_by: userId,
     player_id: player.id,
     game_id: game.id,
-    jersey_number: parsed.data.jerseyNumber,
     video_url: parsed.data.videoUrl,
     visibility: "private",
     approval_status: "pending"
@@ -233,6 +232,7 @@ export async function submitEvidence(formData: FormData) {
   const { error: statsError } = await supabase.from("stats").insert({
     player_id: player.id,
     game_id: game.id,
+    jersey_number: parsed.data.jerseyNumber,
     points: parsed.data.points,
     rebounds: parsed.data.rebounds,
     assists: parsed.data.assists,
