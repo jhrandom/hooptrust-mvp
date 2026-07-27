@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   const sessionId = request.cookies.get(spotifyCookieNames.sessionId)?.value;
   const legacyValue = request.cookies.get(spotifyCookieNames.session)?.value;
   const storedSession =
-    readStoredSpotifySession(sessionId) ??
+    await readStoredSpotifySession(sessionId) ??
     openSplitSpotifySession(spotifyCookieNames.sessionChunks.map((name) => request.cookies.get(name)?.value)) ??
     (legacyValue ? openSpotifySession(legacyValue) : null);
   if (!storedSession) return NextResponse.json({ error: "Connect Spotify first." }, { status: 401 });
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       tracks: tracks.map((track) => ({ name: track.name, artist: track.artists.map((artist) => artist.name).join(", ") }))
     });
     if (session !== storedSession) {
-      storeSpotifySession(session, sessionId);
+      await storeSpotifySession(session, sessionId);
     }
     return response;
   } catch (error) {

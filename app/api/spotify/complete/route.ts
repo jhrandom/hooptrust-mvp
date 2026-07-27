@@ -3,15 +3,15 @@ import { deleteStoredSpotifySession, readStoredSpotifySession, spotifyCookieName
 
 export async function GET(request: NextRequest) {
   const ticket = request.nextUrl.searchParams.get("ticket") ?? undefined;
-  const session = readStoredSpotifySession(ticket);
+  const session = await readStoredSpotifySession(ticket);
   const destination = new URL(
     session ? "/rhythm?spotify=connected" : "/rhythm?spotify=session-not-ready",
     request.url
   );
   const response = NextResponse.redirect(destination);
   if (session) {
-    deleteStoredSpotifySession(ticket);
-    const sessionId = storeSpotifySession(session);
+    await deleteStoredSpotifySession(ticket);
+    const sessionId = await storeSpotifySession(session);
     response.cookies.set(spotifyCookieNames.sessionId, sessionId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

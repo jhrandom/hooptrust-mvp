@@ -13,10 +13,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/rhythm?spotify=invalid-state", request.url));
   }
 
+  let session;
   try {
-    const session = await exchangeSpotifyCode(code, verifier);
+    session = await exchangeSpotifyCode(code, verifier);
+  } catch (error) {
+    console.error("Spotify OAuth token exchange failed:", error instanceof Error ? error.message : error);
+    return NextResponse.redirect(new URL("/rhythm?spotify=token-exchange-failed", request.url));
+  }
+
+  try {
     const completionUrl = new URL("/api/spotify/complete", request.url);
-    completionUrl.searchParams.set("ticket", storeSpotifySession(session));
+    completionUrl.searchParams.set("ticket", await storeSpotifySession(session));
     const response = NextResponse.redirect(completionUrl);
     response.cookies.delete(spotifyCookieNames.session);
     spotifyCookieNames.sessionChunks.forEach((name) => response.cookies.delete(name));
@@ -24,7 +31,7 @@ export async function GET(request: NextRequest) {
     response.cookies.delete(spotifyCookieNames.verifier);
     return response;
   } catch (error) {
-    console.error("Spotify OAuth token exchange failed:", error instanceof Error ? error.message : error);
-    return NextResponse.redirect(new URL("/rhythm?spotify=connection-failed", request.url));
+    console.error("Spotify session storage failed:", error instanceof Error ? error.message : error);
+    return NextResponse.redirect(new URL("/rhythm?spotify=session-storage-failed", request.url));
   }
 }

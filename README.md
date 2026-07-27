@@ -43,7 +43,7 @@ cp .env.example .env.local
 ### Supabase setup
 
 1. Create a Supabase project and copy its Project URL and publishable key.
-2. Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `NEXT_PUBLIC_SITE_URL` to `.env.local`.
+2. Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `NEXT_PUBLIC_SITE_URL` to `.env.local`. Add the server-only `SUPABASE_SECRET_KEY` when deploying persistent Spotify sessions.
 3. Run `npx supabase init`, `npx supabase login`, and `npx supabase link --project-ref YOUR_PROJECT_REF`.
 4. Apply the tracked schema with `npx supabase db push`.
 5. In Supabase Auth URL Configuration, set the Site URL to your public domain and add `https://your-domain.example/auth/callback` as a redirect URL.
@@ -58,7 +58,7 @@ Authentication remains in demo mode when the Supabase variables are absent. Once
 3. Add the client ID and secret to `.env.local`.
 4. Open `https://your-domain.example/rhythm`. The app derives its callback from `NEXT_PUBLIC_SITE_URL` unless `SPOTIFY_REDIRECT_URI` explicitly overrides it.
 
-The integration requests only `playlist-modify-private`. Spotify tokens are encrypted in a local ignored data file and the browser receives an opaque session cookie. A production deployment should store encrypted refresh tokens in the authenticated user's Supabase account record.
+The integration requests only `playlist-modify-private`. Spotify tokens are encrypted before storage and the browser receives an opaque session cookie. Deployed environments use the server-only `spotify_sessions` Supabase table when `SUPABASE_SECRET_KEY` is configured; local development falls back to an ignored `.data` file.
 
 ## Important pages
 

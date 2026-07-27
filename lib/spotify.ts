@@ -3,6 +3,7 @@ import "server-only";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
+import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 import type { RhythmTrack } from "./rhythm-data";
 
 const SPOTIFY_API = "https://api.spotify.com/v1";
@@ -115,19 +116,46 @@ export async function ensureFreshSpotifySession(session: SpotifySession) {
   return session.expiresAt > Date.now() + 60_000 ? session : refreshSpotifySession(session);
 }
 
-export function storeSpotifySession(session: SpotifySession, existingId?: string) {
+export async function storeSpotifySession(session: SpotifySession, existingId?: string) {
   const id = existingId ?? randomBytes(32).toString("base64url");
+  const storedUntil = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const admin = getSpotifySessionAdminClient();
+  if (admin) {
+    const { error } = await admin.from("spotify_sessions").upsert({
+      id,
+      sealed_session: sealSpotifySession(session),
+      expires_at: new Date(storedUntil).toISOString()
+    });
+    if (error) throw new Error(`Could not save Spotify session: ${error.message}`);
+    return id;
+  }
+
   const sessions = readSpotifySessionFile();
   sessions[id] = {
     sealed: sealSpotifySession(session),
-    storedUntil: Date.now() + 30 * 24 * 60 * 60 * 1000
+    storedUntil
   };
   writeSpotifySessionFile(sessions);
   return id;
 }
 
-export function readStoredSpotifySession(id: string | undefined) {
+export async function readStoredSpotifySession(id: string | undefined) {
   if (!id) return null;
+  const admin = getSpotifySessionAdminClient();
+  if (admin) {
+    const { data, error } = await admin
+      .from("spotify_sessions")
+      .select("sealed_session, expires_at")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw new Error(`Could not read Spotify session: ${error.message}`);
+    if (!data || new Date(data.expires_at).getTime() < Date.now()) {
+      if (data) await deleteStoredSpotifySession(id);
+      return null;
+    }
+    return openSpotifySession(data.sealed_session);
+  }
+
   const sessions = readSpotifySessionFile();
   const stored = sessions[id];
   if (!stored || stored.storedUntil < Date.now()) {
@@ -140,13 +168,29 @@ export function readStoredSpotifySession(id: string | undefined) {
   return openSpotifySession(stored.sealed);
 }
 
-export function deleteStoredSpotifySession(id: string | undefined) {
+export async function deleteStoredSpotifySession(id: string | undefined) {
   if (!id) return;
+  const admin = getSpotifySessionAdminClient();
+  if (admin) {
+    const { error } = await admin.from("spotify_sessions").delete().eq("id", id);
+    if (error) throw new Error(`Could not delete Spotify session: ${error.message}`);
+    return;
+  }
+
   const sessions = readSpotifySessionFile();
   if (sessions[id]) {
     delete sessions[id];
     writeSpotifySessionFile(sessions);
   }
+}
+
+function getSpotifySessionAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
+  if (!url || !secretKey) return null;
+  return createSupabaseAdminClient(url, secretKey, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
 }
 
 function readSpotifySessionFile(): Record<string, StoredSpotifySession> {

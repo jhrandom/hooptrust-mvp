@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   const sessionId = request.cookies.get(spotifyCookieNames.sessionId)?.value;
   const legacyValue = request.cookies.get(spotifyCookieNames.session)?.value;
   const storedSession =
-    readStoredSpotifySession(sessionId) ??
+    await readStoredSpotifySession(sessionId) ??
     openSplitSpotifySession(spotifyCookieNames.sessionChunks.map((name) => request.cookies.get(name)?.value)) ??
     (legacyValue ? openSpotifySession(legacyValue) : null);
   if (!storedSession) return NextResponse.json({ configured, connected: false });
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const session = await ensureFreshSpotifySession(storedSession);
     const response = NextResponse.json({ configured, connected: true });
     if (session !== storedSession) {
-      storeSpotifySession(session, sessionId);
+      await storeSpotifySession(session, sessionId);
     }
     return response;
   } catch {

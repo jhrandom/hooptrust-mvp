@@ -82,6 +82,8 @@ export function RhythmPlanner() {
         const errors: Record<string, string> = {
           "invalid-state": "Spotify connection could not be verified. Please try again from this page.",
           "connection-failed": "Spotify accepted permission, but the token exchange failed. Check the server terminal for details.",
+          "token-exchange-failed": "Spotify accepted permission, but Spotify rejected the token exchange. Verify the client secret and exact redirect URI.",
+          "session-storage-failed": "Spotify connected, but the server could not save the session. Verify the Supabase secret key and spotify_sessions migration.",
           "session-not-ready": "Spotify authorized access, but the server could not recover the new session.",
           "access_denied": "Spotify permission was not granted.",
           "not-configured": "Spotify credentials are not configured."

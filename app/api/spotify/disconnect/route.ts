@@ -6,7 +6,7 @@ export async function POST(request: Request) {
     ?.split(";")
     .map((part) => part.trim())
     .find((part) => part.startsWith(`${spotifyCookieNames.sessionId}=`));
-  deleteStoredSpotifySession(sessionCookie?.slice(sessionCookie.indexOf("=") + 1));
+  await deleteStoredSpotifySession(sessionCookie?.slice(sessionCookie.indexOf("=") + 1));
   const response = NextResponse.json({ connected: false });
   response.cookies.delete(spotifyCookieNames.sessionId);
   response.cookies.delete(spotifyCookieNames.session);
