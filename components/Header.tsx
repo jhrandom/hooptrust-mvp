@@ -4,21 +4,26 @@ import { logout } from "@/app/auth/actions";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
-const navItems = [
+const publicNavItems = [
   { href: "/players/tyler-kim", label: "Sample Profile" },
-  { href: "/dashboard/recruiter", label: "Recruiter Portal" },
-  { href: "/rhythm", label: "Rhythm" },
-  { href: "/verify-stats", label: "Verify Stats" },
-  { href: "/admin", label: "Admin" }
+  { href: "/rhythm", label: "Rhythm" }
 ];
 
 export async function Header() {
   let signedIn = false;
+  let portal = { href: "/dashboard/player", label: "Player Portal" };
   if (isSupabaseConfigured()) {
     const supabase = await createClient();
     const { data } = await supabase.auth.getClaims();
-    signedIn = Boolean(data?.claims);
+    const userId = data?.claims?.sub;
+    signedIn = Boolean(userId);
+    if (userId) {
+      const { data: profile } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
+      if (profile?.role === "recruiter") portal = { href: "/dashboard/recruiter", label: "Recruiter Portal" };
+      if (profile?.role === "admin") portal = { href: "/admin", label: "Admin Portal" };
+    }
   }
+  const navItems = signedIn ? [portal, ...publicNavItems] : publicNavItems;
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-white/90 backdrop-blur">
@@ -37,11 +42,16 @@ export async function Header() {
           ))}
         </nav>
         {signedIn ? (
-          <form action={logout}>
-            <button type="submit" className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90">
-              Log out
-            </button>
-          </form>
+          <div className="flex items-center gap-2">
+            <Link href={portal.href} className="rounded-full bg-court px-4 py-2 text-sm font-semibold text-white shadow-sm md:hidden">
+              Portal
+            </Link>
+            <form action={logout}>
+              <button type="submit" className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90">
+                Log out
+              </button>
+            </form>
+          </div>
         ) : (
           <Link href="/signup" className="rounded-full bg-court px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90">
             Join Beta

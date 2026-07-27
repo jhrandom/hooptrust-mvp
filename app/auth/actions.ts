@@ -44,7 +44,8 @@ export async function login(formData: FormData) {
   if (parsed.data.next?.startsWith("/") && !parsed.data.next.startsWith("//")) {
     redirect(parsed.data.next);
   }
-  const role = data.user.user_metadata?.role;
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
+  const role = profile?.role ?? data.user.user_metadata?.role;
   if (role === "recruiter") redirect("/dashboard/recruiter");
   if (role === "admin") redirect("/admin");
   redirect("/dashboard/player");
@@ -83,7 +84,10 @@ export async function signup(formData: FormData) {
   });
   if (error) authRedirect("/signup", "error", error.message);
 
-  if (data.session) redirect("/dashboard/player");
+  if (data.session) {
+    if (parsed.data.role === "recruiter") redirect("/dashboard/recruiter");
+    redirect("/dashboard/player");
+  }
   authRedirect("/login", "message", "Check your email to confirm your account, then log in.");
 }
 
