@@ -74,7 +74,7 @@ export async function signup(formData: FormData) {
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      emailRedirectTo: `${siteUrl}/auth/callback`,
+      emailRedirectTo: siteUrl,
       data: {
         full_name: parsed.data.fullName,
         role: parsed.data.role

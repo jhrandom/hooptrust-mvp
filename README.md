@@ -49,6 +49,16 @@ cp .env.example .env.local
 5. In Supabase Auth URL Configuration, set the Site URL to your public domain and add `https://your-domain.example/auth/callback` as a redirect URL.
 6. Restart the development server after changing environment variables.
 
+For SSR-safe email confirmation, open **Authentication → Email Templates → Confirm signup** in Supabase and use this link in the template:
+
+```html
+<a href="{{ .RedirectTo }}/auth/confirm?token_hash={{ .TokenHash }}&type=email">
+  Confirm email address
+</a>
+```
+
+This token-hash route does not depend on a browser-specific PKCE verifier.
+
 Authentication remains in demo mode when the Supabase variables are absent. Once configured, signup, email confirmation, login, logout, SSR session refresh, and dashboard authentication activate automatically.
 
 ### Spotify setup
