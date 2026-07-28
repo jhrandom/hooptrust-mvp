@@ -5,7 +5,8 @@ import { recordAdminAction } from "@/lib/admin-audit";
 
 const schema = z.object({
   videoId: z.string().uuid(),
-  status: z.enum(["approved", "rejected"])
+  status: z.enum(["approved", "rejected"]),
+  notes: z.string().trim().max(1000).optional()
 });
 
 export async function PATCH(request: Request) {
@@ -21,7 +22,12 @@ export async function PATCH(request: Request) {
 
   const { data: video, error } = await supabase
     .from("videos")
-    .update({ approval_status: parsed.data.status })
+    .update({
+      approval_status: parsed.data.status,
+      review_notes: parsed.data.notes || null,
+      reviewed_by: userId,
+      reviewed_at: new Date().toISOString()
+    })
     .eq("id", parsed.data.videoId)
     .select("id, game_id")
     .maybeSingle();
@@ -37,7 +43,8 @@ export async function PATCH(request: Request) {
   }
 
   await recordAdminAction(supabase, userId, `evidence_${parsed.data.status}`, "video", video.id, {
-    game_id: video.game_id
+    game_id: video.game_id,
+    notes: parsed.data.notes
   });
   return NextResponse.json({ status: parsed.data.status });
 }

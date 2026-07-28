@@ -8,6 +8,7 @@ export type EvidenceRow = {
   id: string;
   video_url: string | null;
   approval_status: string | null;
+  review_notes: string | null;
   created_at: string;
   players: { full_name: string } | null;
   games: { opponent: string | null; game_date: string | null; tournament: string | null } | null;
@@ -35,18 +36,18 @@ export function EvidenceReviewList({ initialRows }: { initialRows: EvidenceRow[]
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function decide(videoId: string, status: "approved" | "rejected") {
+  async function decide(videoId: string, status: "approved" | "rejected", notes?: string) {
     setBusy(videoId);
     setError(null);
     try {
       const response = await fetch("/api/videos/review", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoId, status })
+        body: JSON.stringify({ videoId, status, notes })
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error ?? "The decision could not be saved.");
-      setRows((current) => current.map((row) => row.id === videoId ? { ...row, approval_status: status } : row));
+      setRows((current) => current.map((row) => row.id === videoId ? { ...row, approval_status: status, review_notes: notes || null } : row));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "The decision could not be saved.");
     } finally {
@@ -80,10 +81,11 @@ export function EvidenceReviewList({ initialRows }: { initialRows: EvidenceRow[]
 function EvidenceCard({ row, busy, onDecision, onStatsSaved }: {
   row: EvidenceRow;
   busy: boolean;
-  onDecision: (videoId: string, status: "approved" | "rejected") => void;
+  onDecision: (videoId: string, status: "approved" | "rejected", notes?: string) => void;
   onStatsSaved: (stats: NonNullable<EvidenceRow["stats"]>) => void;
 }) {
   const pending = (row.approval_status ?? "pending") === "pending";
+  const [reviewNotes, setReviewNotes] = useState(row.review_notes ?? "");
   return (
     <article className="rounded-3xl border border-line bg-white p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -104,10 +106,13 @@ function EvidenceCard({ row, busy, onDecision, onStatsSaved }: {
           Open submitted video <ExternalLink size={16} />
         </a>
       ) : <p className="mt-5 text-sm text-red-700">No video URL was stored.</p>}
-      {pending ? <div className="mt-4 flex gap-2">
-        <button type="button" disabled={busy} onClick={() => onDecision(row.id, "approved")} className="rounded-full border border-green-300 px-4 py-2 text-sm font-bold text-green-800 disabled:opacity-50">Approve evidence</button>
-        <button type="button" disabled={busy} onClick={() => onDecision(row.id, "rejected")} className="rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-700 disabled:opacity-50">Reject</button>
-      </div> : null}
+      {pending ? <div className="mt-4">
+        <textarea value={reviewNotes} onChange={(event) => setReviewNotes(event.target.value)} maxLength={1000} placeholder="Feedback for the player (required when rejecting)…" className="min-h-20 w-full rounded-2xl border border-line px-4 py-3 text-sm" />
+        <div className="mt-3 flex gap-2">
+          <button type="button" disabled={busy} onClick={() => onDecision(row.id, "approved", reviewNotes)} className="rounded-full border border-green-300 px-4 py-2 text-sm font-bold text-green-800 disabled:opacity-50">Approve evidence</button>
+          <button type="button" disabled={busy || reviewNotes.trim().length < 3} onClick={() => onDecision(row.id, "rejected", reviewNotes)} className="rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-700 disabled:opacity-50">Reject</button>
+        </div>
+      </div> : row.review_notes ? <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-muted"><span className="font-bold text-ink">Admin feedback:</span> {row.review_notes}</p> : null}
     </article>
   );
 }

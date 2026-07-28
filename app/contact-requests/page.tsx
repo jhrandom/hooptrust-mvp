@@ -8,7 +8,7 @@ export default async function ContactRequestsPage() {
   const supabase = await createClient();
   const { data: player } = await supabase.from("players").select("id").eq("user_id", auth!.userId).maybeSingle();
   const { data: requests } = player
-    ? await supabase.from("contact_requests").select("id, message, status, recruiters(full_name, program)").eq("player_id", player.id).eq("status", "pending").order("created_at", { ascending: false })
+    ? await supabase.from("contact_requests").select("id, message, status, recruiters(full_name, program)").eq("player_id", player.id).order("created_at", { ascending: false })
     : { data: [] };
-  return <main className="container-page py-10"><PortalBackLink /><h1 className="text-3xl font-black text-ink">Contact requests</h1><p className="mt-2 text-muted">Approve only recruiters you are comfortable contacting.</p><div className="mt-8"><ContactDecisionList initialRows={(requests ?? []) as never[]} /></div></main>;
+  return <main className="container-page py-10"><PortalBackLink /><h1 className="text-3xl font-black text-ink">Contact requests</h1><p className="mt-2 text-muted">Review pending requests and your complete approval, decline, or revocation history.</p><div className="mt-8"><ContactDecisionList initialRows={(requests ?? []) as never[]} /></div></main>;
 }

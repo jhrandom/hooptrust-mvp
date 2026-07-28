@@ -14,10 +14,18 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   const samplePlayer = samplePlayers.find((item) => item.id === id);
   if (samplePlayer) return <SampleProfile player={samplePlayer} />;
 
-  await requireAuthenticatedUser(`/players/${id}`);
+  const auth = await requireAuthenticatedUser(`/players/${id}`);
   const supabase = await createClient();
   const { data: player } = await supabase.from("players").select("*").eq("id", id).maybeSingle();
   if (!player) notFound();
+  let approvedRecruiter = false;
+  if (auth && player.user_id !== auth.userId) {
+    const { data: recruiter } = await supabase.from("recruiters").select("id, status").eq("user_id", auth.userId).maybeSingle();
+    if (recruiter?.status === "approved") {
+      approvedRecruiter = true;
+      await supabase.from("player_profile_views").insert({ player_id: player.id, recruiter_id: recruiter.id });
+    }
+  }
 
   const { data: stats } = await supabase
     .from("stats")
@@ -29,6 +37,23 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
     .select("id, video_url, games(opponent)")
     .eq("player_id", id)
     .eq("approval_status", "approved");
+  const { data: schedule } = await supabase
+    .from("player_schedule")
+    .select("id, event_name, opponent, event_date, location")
+    .eq("player_id", id)
+    .gte("event_date", new Date().toISOString())
+    .order("event_date")
+    .limit(5);
+  const verifiedStats = (stats ?? []).filter((line) => line.verification_status === "verified");
+  const performance = {
+    games: verifiedStats.length,
+    ppg: averageStat(verifiedStats, "points"),
+    rpg: averageStat(verifiedStats, "rebounds"),
+    apg: averageStat(verifiedStats, "assists"),
+    fg: shootingPercentage(verifiedStats, "fgm", "fga"),
+    three: shootingPercentage(verifiedStats, "tpm", "tpa"),
+    ft: shootingPercentage(verifiedStats, "ftm", "fta")
+  };
 
   return (
     <main className="container-page py-10">
@@ -39,6 +64,18 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
           <h1 className="mt-2 text-4xl font-black">{player.full_name}</h1>
           <p className="mt-2 text-white/80">{player.position || "Position not provided"} · {player.height || "Height not provided"} · Class of {player.graduation_year || "—"}</p>
           <p className="mt-1 text-white/80">{player.school || "School not provided"} · {[player.city, player.country].filter(Boolean).join(", ")}</p>
+        </div>
+        <div className="border-b border-line bg-slate-50 p-6">
+          <p className="mb-4 text-sm font-bold uppercase tracking-wide text-muted">Verified performance</p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-7">
+            <MetricCard label="Games" value={performance.games} helper="Verified" />
+            <MetricCard label="PPG" value={performance.ppg} helper="Points per game" />
+            <MetricCard label="RPG" value={performance.rpg} helper="Rebounds per game" />
+            <MetricCard label="APG" value={performance.apg} helper="Assists per game" />
+            <MetricCard label="FG%" value={performance.fg} helper="Field goals" />
+            <MetricCard label="3PT%" value={performance.three} helper="Three-pointers" />
+            <MetricCard label="FT%" value={performance.ft} helper="Free throws" />
+          </div>
         </div>
         <div className="grid gap-6 p-6 lg:grid-cols-[1fr_330px]">
           <div>
@@ -72,11 +109,15 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
                 {!stats?.length ? <p className="text-sm text-muted">No stat lines have been submitted.</p> : null}
               </div>
             </section>
+            <section className="mt-8 rounded-3xl border border-line p-6">
+              <h2 className="text-xl font-black text-ink">Upcoming schedule</h2>
+              <div className="mt-4 space-y-3">{(schedule ?? []).map((event) => <div key={event.id} className="rounded-2xl bg-slate-50 p-4"><p className="font-bold text-ink">{event.event_name}{event.opponent ? ` · vs ${event.opponent}` : ""}</p><p className="mt-1 text-sm text-muted">{new Date(event.event_date).toLocaleString()} · {event.location || "Location TBD"}</p></div>)}{!schedule?.length ? <p className="text-sm text-muted">No upcoming events listed.</p> : null}</div>
+            </section>
           </div>
           <aside className="space-y-4">
             <div className="rounded-3xl border border-line bg-slate-50 p-6">
-              <h2 className="text-lg font-black text-ink">Recruiter actions</h2>
-              <RecruiterActions playerId={player.id} />
+              <h2 className="text-lg font-black text-ink">{approvedRecruiter ? "Recruiter actions" : "Profile preview"}</h2>
+              {approvedRecruiter ? <RecruiterActions playerId={player.id} /> : <p className="mt-3 text-sm leading-6 text-muted">This is how approved recruiters see your profile. Private contact details remain hidden.</p>}
               <p className="mt-4 flex gap-2 text-xs leading-5 text-muted"><LockKeyhole size={16} className="shrink-0" />Personal contact information stays hidden until a request is approved.</p>
             </div>
             <div className="rounded-3xl border border-line p-6">
@@ -99,6 +140,22 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
 
 function Info({ label, value }: { label: string; value: string | null }) {
   return <div className="rounded-2xl bg-slate-50 px-4 py-3"><p className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</p><p className="mt-1 font-bold text-ink">{value || "Not provided"}</p></div>;
+}
+
+function averageStat(rows: Array<Record<string, unknown>>, key: string) {
+  const values = rows.map((row) => row[key]).filter((value): value is number => typeof value === "number");
+  return values.length ? (values.reduce((total, value) => total + value, 0) / values.length).toFixed(1) : "—";
+}
+
+function shootingPercentage(rows: Array<Record<string, unknown>>, madeKey: string, attemptedKey: string) {
+  const totals = rows.reduce<{ made: number; attempted: number }>((result, row) => {
+    if (typeof row[madeKey] === "number" && typeof row[attemptedKey] === "number") {
+      result.made += row[madeKey] as number;
+      result.attempted += row[attemptedKey] as number;
+    }
+    return result;
+  }, { made: 0, attempted: 0 });
+  return totals.attempted ? `${((totals.made / totals.attempted) * 100).toFixed(1)}%` : "—";
 }
 
 function SampleProfile({ player }: { player: (typeof samplePlayers)[number] }) {

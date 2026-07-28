@@ -31,6 +31,7 @@ const playerSchema = z.object({
   bio: optionalText(1000),
   gpa: optionalText(30),
   intendedMajor: optionalText(100),
+  profilePhotoUrl: z.preprocess((value) => value === "" ? null : value, z.string().url().max(2000).nullable()),
   recruitingStatus: z.enum(["Open", "Contacted", "Committed"]),
   visibility: z.enum(["private", "recruiter_visible", "public"])
 });
@@ -70,6 +71,14 @@ const contactDetailsSchema = z.object({
   relationship: z.string().trim().min(2).max(60),
   contactEmail: z.string().email().max(320),
   contactPhone: optionalText(50)
+});
+
+const scheduleSchema = z.object({
+  eventName: z.string().trim().min(2).max(150),
+  opponent: optionalText(120),
+  eventDate: z.string().min(1).refine((value) => !Number.isNaN(Date.parse(value))).transform((value) => new Date(value).toISOString()),
+  location: optionalText(150),
+  notes: optionalText(500)
 });
 
 function value(formData: FormData, key: string) {
@@ -118,6 +127,7 @@ export async function savePlayerProfile(formData: FormData) {
     bio: value(formData, "bio"),
     gpa: value(formData, "gpa"),
     intendedMajor: value(formData, "intendedMajor"),
+    profilePhotoUrl: value(formData, "profilePhotoUrl"),
     recruitingStatus: value(formData, "recruitingStatus"),
     visibility: value(formData, "visibility")
   });
@@ -143,6 +153,7 @@ export async function savePlayerProfile(formData: FormData) {
     bio: profile.bio,
     gpa: profile.gpa,
     intended_major: profile.intendedMajor,
+    profile_photo_url: profile.profilePhotoUrl,
     recruiting_status: profile.recruitingStatus,
     visibility: profile.visibility,
     updated_at: new Date().toISOString()
@@ -278,4 +289,51 @@ export async function submitRecruiterApplication(formData: FormData) {
 
   revalidatePath("/dashboard/recruiter");
   withNotice("/dashboard/recruiter", "message", "Application submitted. An administrator must approve it.");
+}
+
+export async function addScheduleEvent(formData: FormData) {
+  const parsed = scheduleSchema.safeParse({
+    eventName: value(formData, "eventName"),
+    opponent: value(formData, "opponent"),
+    eventDate: value(formData, "eventDate"),
+    location: value(formData, "location"),
+    notes: value(formData, "notes")
+  });
+  if (!parsed.success) withNotice("/schedule", "error", "Enter an event name and valid date.");
+  const { supabase, userId } = await requireRole(["player", "guardian"]);
+  const { data: player } = await supabase.from("players").select("id").eq("user_id", userId).maybeSingle();
+  if (!player) withNotice("/profile", "error", "Create your player profile first.");
+  const { error } = await supabase.from("player_schedule").insert({
+    player_id: player.id,
+    event_name: parsed.data.eventName,
+    opponent: parsed.data.opponent,
+    event_date: parsed.data.eventDate,
+    location: parsed.data.location,
+    notes: parsed.data.notes
+  });
+  if (error) withNotice("/schedule", "error", error.message);
+  revalidatePath("/schedule");
+  revalidatePath("/dashboard/player");
+  withNotice("/schedule", "message", "Schedule event added.");
+}
+
+export async function deleteScheduleEvent(formData: FormData) {
+  const id = z.string().uuid().safeParse(value(formData, "id"));
+  if (!id.success) withNotice("/schedule", "error", "Invalid schedule event.");
+  const { supabase } = await requireRole(["player", "guardian"]);
+  const { error } = await supabase.from("player_schedule").delete().eq("id", id.data);
+  if (error) withNotice("/schedule", "error", error.message);
+  revalidatePath("/schedule");
+  redirect("/schedule");
+}
+
+export async function requestAccountDeletion(formData: FormData) {
+  const reason = z.string().trim().max(1000).safeParse(value(formData, "reason") || "");
+  if (!reason.success) withNotice("/settings", "error", "Deletion reason is too long.");
+  const { supabase, userId } = await authenticatedContext();
+  const { data: existing } = await supabase.from("deletion_requests").select("id").eq("user_id", userId).eq("status", "pending").maybeSingle();
+  if (existing) withNotice("/settings", "message", "A deletion request is already pending.");
+  const { error } = await supabase.from("deletion_requests").insert({ user_id: userId, reason: reason.data || null });
+  if (error) withNotice("/settings", "error", error.message);
+  withNotice("/settings", "message", "Account and data deletion request submitted.");
 }

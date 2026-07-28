@@ -43,7 +43,7 @@ export default async function AdminPage() {
     .limit(30);
   const { data: evidenceRows, error: evidenceError } = await supabase
     .from("videos")
-    .select("id, player_id, game_id, video_url, approval_status, created_at, players(full_name), games(opponent, game_date, tournament)")
+    .select("id, player_id, game_id, video_url, approval_status, review_notes, created_at, players(full_name), games(opponent, game_date, tournament)")
     .order("created_at", { ascending: false });
   const evidenceGameIds = (evidenceRows ?? []).map((row) => row.game_id).filter((id): id is string => Boolean(id));
   const { data: evidenceStats, error: evidenceStatsError } = evidenceGameIds.length

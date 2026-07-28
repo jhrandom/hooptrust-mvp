@@ -27,8 +27,9 @@ export function ContactDecisionList({ initialRows }: { initialRows: ContactRow[]
   return <DecisionRows rows={rows} empty="No pending contact requests." render={(row) => (
     <div key={row.id} className="rounded-2xl border border-line bg-white p-5 shadow-sm">
       <p className="font-bold text-ink">{row.recruiters?.full_name ?? "Recruiter"} · {row.recruiters?.program}</p>
+      <span className="mt-2 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase text-muted">{row.status}</span>
       <p className="mt-2 text-sm leading-6 text-muted">{row.message}</p>
-      <div className="mt-4 flex gap-2"><Action onClick={() => decide("/api/contact-requests", { requestId: row.id, status: "approved" }, () => setRows((all) => all.filter((item) => item.id !== row.id)))}>Approve</Action><Action onClick={() => decide("/api/contact-requests", { requestId: row.id, status: "declined" }, () => setRows((all) => all.filter((item) => item.id !== row.id)))}>Decline</Action></div>
+      {row.status === "pending" ? <div className="mt-4 flex gap-2"><Action onClick={() => decide("/api/contact-requests", { requestId: row.id, status: "approved" }, () => setRows((all) => all.map((item) => item.id === row.id ? { ...item, status: "approved" } : item)))}>Approve</Action><Action onClick={() => decide("/api/contact-requests", { requestId: row.id, status: "declined" }, () => setRows((all) => all.map((item) => item.id === row.id ? { ...item, status: "declined" } : item)))}>Decline</Action></div> : null}
     </div>
   )} />;
 }

@@ -1,29 +1,25 @@
 import Link from "next/link";
-import { StatBadge } from "@/components/StatBadge";
+import { PlayerSubmissions } from "@/components/PlayerSubmissions";
+import { PortalBackLink } from "@/components/PortalBackLink";
 import { requireProfileRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { PortalBackLink } from "@/components/PortalBackLink";
 
 export default async function SubmissionsPage() {
   const auth = await requireProfileRole(["player", "guardian"], "/submissions");
   const supabase = await createClient();
   const { data: player } = await supabase.from("players").select("id").eq("user_id", auth!.userId).maybeSingle();
-  const { data: stats } = player
-    ? await supabase.from("stats").select("id, points, rebounds, assists, verification_status, created_at, games(opponent, game_date)").eq("player_id", player.id).order("created_at", { ascending: false })
+  const { data: videos } = player
+    ? await supabase.from("videos").select("id, game_id, video_url, approval_status, review_notes, games(opponent, game_date)").eq("player_id", player.id).order("created_at", { ascending: false })
     : { data: [] };
-
-  return (
-    <main className="container-page py-10">
-      <PortalBackLink />
-      <h1 className="text-3xl font-black text-ink">Submission status</h1>
-      <p className="mt-2 text-muted">Track the statistics you have submitted for verification.</p>
-      <div className="mt-8 space-y-4">
-        {(stats ?? []).map((line) => {
-          const game = Array.isArray(line.games) ? line.games[0] : line.games;
-          return <article key={line.id} className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-line bg-white p-6 shadow-sm"><div><p className="font-black text-ink">vs {game?.opponent ?? "Opponent"}</p><p className="mt-1 text-sm text-muted">{line.points} PTS · {line.rebounds} REB · {line.assists} AST</p></div><StatBadge status={line.verification_status} /></article>;
-        })}
-        {!stats?.length ? <div className="rounded-3xl border border-line bg-white p-6"><p className="text-muted">No submissions yet.</p><Link href="/upload" className="mt-4 inline-flex rounded-full bg-court px-5 py-3 font-bold text-white">Submit your first game</Link></div> : null}
-      </div>
-    </main>
-  );
+  const gameIds = (videos ?? []).map((video) => video.game_id).filter((id): id is string => Boolean(id));
+  const { data: stats } = gameIds.length
+    ? await supabase.from("stats").select("*").eq("player_id", player!.id).in("game_id", gameIds)
+    : { data: [] };
+  const rows = (videos ?? []).map((video) => ({
+    ...video,
+    approval_status: video.approval_status ?? "pending",
+    games: Array.isArray(video.games) ? video.games[0] ?? null : video.games,
+    stats: (stats ?? []).find((line) => line.game_id === video.game_id) ?? null
+  }));
+  return <main className="container-page py-10"><PortalBackLink /><h1 className="text-3xl font-black text-ink">Submissions and feedback</h1><p className="mt-2 text-muted">Track review decisions, read administrator feedback, and edit or withdraw evidence while it is pending.</p><div className="mt-8"><PlayerSubmissions initialRows={rows} /></div>{!player ? <Link href="/profile">Create profile</Link> : null}</main>;
 }

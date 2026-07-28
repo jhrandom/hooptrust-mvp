@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getRhythmRecommendation } from "@/lib/rhythm-data";
 import { createSpotifyPlaylist, ensureFreshSpotifySession, findSpotifyTracks, openSpotifySession, openSplitSpotifySession, readStoredSpotifySession, spotifyCookieNames, storeSpotifySession } from "@/lib/spotify";
+import { createClient } from "@/lib/supabase/server";
 
 const requestSchema = z.object({
   situationId: z.enum(["pre-game", "training", "post-game"]),
@@ -34,6 +35,20 @@ export async function POST(request: NextRequest) {
       `Private HoopTrust Rhythm playlist · ${recommendation.vibe} · ${recommendation.bpmRange}`,
       tracks.map((track) => track.uri)
     );
+    try {
+      const supabase = await createClient();
+      const { data: claims } = await supabase.auth.getClaims();
+      const userId = claims?.claims?.sub;
+      if (userId) {
+        await supabase.from("rhythm_playlists").insert({
+          user_id: userId,
+          playlist_name: recommendation.playlistName,
+          playlist_url: playlist.external_urls.spotify
+        });
+      }
+    } catch {
+      // Playlist creation should still succeed if optional history cannot be saved.
+    }
     const response = NextResponse.json({
       playlistUrl: playlist.external_urls.spotify,
       playlistName: recommendation.playlistName,

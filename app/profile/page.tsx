@@ -68,6 +68,7 @@ export default async function ProfilePage({
           <Field label="Jersey number" name="jerseyNumber" type="number" defaultValue={profile?.jersey_number} />
           <Field label="GPA" name="gpa" defaultValue={profile?.gpa} />
           <Field label="Intended major" name="intendedMajor" defaultValue={profile?.intended_major} />
+          <Field label="Profile photo URL" name="profilePhotoUrl" type="url" placeholder="https://…" defaultValue={profile?.profile_photo_url} />
           <label className="grid gap-2 text-sm font-semibold text-ink">
             Recruiting status
             <select name="recruitingStatus" defaultValue={profile?.recruiting_status ?? "Open"} className="rounded-2xl border border-line px-4 py-3 font-normal">
