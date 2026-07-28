@@ -16,10 +16,22 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
       <Field name="eventDate" label="Date and time" type="datetime-local" required />
       <Field name="opponent" label="Opponent (optional)" />
       <Field name="location" label="Location" />
+      <label className="grid gap-2 text-sm font-bold">Timezone *
+        <select name="timezone" required defaultValue="Asia/Seoul" className="rounded-2xl border border-line px-4 py-3 font-normal">
+          <option value="Asia/Seoul">Korea (Asia/Seoul)</option>
+          <option value="Asia/Tokyo">Japan (Asia/Tokyo)</option>
+          <option value="Asia/Shanghai">China (Asia/Shanghai)</option>
+          <option value="America/New_York">US Eastern</option>
+          <option value="America/Chicago">US Central</option>
+          <option value="America/Denver">US Mountain</option>
+          <option value="America/Los_Angeles">US Pacific</option>
+          <option value="UTC">UTC</option>
+        </select>
+      </label>
       <label className="grid gap-2 text-sm font-bold md:col-span-2">Notes<textarea name="notes" maxLength={500} className="min-h-20 rounded-2xl border border-line px-4 py-3 font-normal" /></label>
       <button className="rounded-full bg-court px-5 py-3 font-bold text-white md:col-span-2">Add event</button>
     </form>
-    <div className="mt-8 space-y-3">{(events ?? []).map((event) => <article key={event.id} className="flex flex-wrap justify-between gap-4 rounded-3xl border border-line bg-white p-5"><div><p className="font-black text-ink">{event.event_name}</p><p className="mt-1 text-sm text-muted">{new Date(event.event_date).toLocaleString()} · {event.location || "Location TBD"}</p>{event.opponent ? <p className="mt-1 text-sm text-muted">vs {event.opponent}</p> : null}</div><form action={deleteScheduleEvent}><input type="hidden" name="id" value={event.id} /><button className="text-sm font-bold text-red-700">Remove</button></form></article>)}</div>
+    <div className="mt-8 space-y-3">{(events ?? []).map((event) => <article key={event.id} className="flex flex-wrap justify-between gap-4 rounded-3xl border border-line bg-white p-5"><div><p className="font-black text-ink">{event.event_name}</p><p className="mt-1 text-sm text-muted">{new Date(event.event_date).toLocaleString("en-US", { timeZone: event.timezone })} ({event.timezone}) · {event.location || "Location TBD"}</p>{event.opponent ? <p className="mt-1 text-sm text-muted">vs {event.opponent}</p> : null}</div><form action={deleteScheduleEvent}><input type="hidden" name="id" value={event.id} /><button className="text-sm font-bold text-red-700">Remove</button></form></article>)}</div>
   </main>;
 }
 

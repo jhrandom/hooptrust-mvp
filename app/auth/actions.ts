@@ -98,3 +98,25 @@ export async function logout() {
   }
   redirect("/");
 }
+
+export async function requestPasswordReset(formData: FormData) {
+  const email = z.string().email().safeParse(formData.get("email"));
+  if (!email.success) authRedirect("/forgot-password", "error", "Enter a valid email.");
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "");
+  if (!siteUrl) authRedirect("/forgot-password", "error", "Site URL is not configured.");
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email.data, {
+    redirectTo: `${siteUrl}/auth/callback?next=/update-password`
+  });
+  if (error) authRedirect("/forgot-password", "error", error.message);
+  authRedirect("/forgot-password", "message", "If the account exists, a password-reset email has been sent.");
+}
+
+export async function updatePassword(formData: FormData) {
+  const password = z.string().min(10).safeParse(formData.get("password"));
+  if (!password.success) authRedirect("/update-password", "error", "Use a password of at least 10 characters.");
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password: password.data });
+  if (error) authRedirect("/update-password", "error", error.message);
+  authRedirect("/login", "message", "Password updated. Log in with your new password.");
+}

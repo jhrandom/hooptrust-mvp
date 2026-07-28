@@ -54,6 +54,7 @@ export default async function PlayerDashboardPage() {
   const average = (key: "points" | "rebounds" | "assists") =>
     verified.length ? (verified.reduce((sum, line) => sum + (line[key] ?? 0), 0) / verified.length).toFixed(1) : "—";
   const pendingRequests = (requests ?? []).filter((request) => request.status === "pending").length;
+  const correctionNeeded = (videos ?? []).filter((video) => video.approval_status === "rejected");
 
   return (
     <main className="container-page py-10">
@@ -67,6 +68,7 @@ export default async function PlayerDashboardPage() {
         <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-court" style={{ width: `${completion}%` }} /></div>
         {missing.length ? <p className="mt-4 text-sm text-muted">Still needed: <span className="font-bold text-ink">{missing.join(", ")}</span></p> : <p className="mt-4 text-sm font-bold text-green-700">Your profile is complete.</p>}
       </section>
+      {correctionNeeded.length ? <Link href="/submissions" className="mt-6 block rounded-3xl border border-red-300 bg-red-50 p-5"><p className="font-black text-red-800">{correctionNeeded.length} submission{correctionNeeded.length === 1 ? "" : "s"} require attention</p><p className="mt-2 text-sm text-red-700">Review the administrator’s feedback and prepare corrected evidence.</p></Link> : null}
 
       <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <MetricCard label="Verified games" value={verified.length} helper="Admin-verified stat lines" />

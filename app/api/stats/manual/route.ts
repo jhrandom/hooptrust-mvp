@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { recordAdminAction } from "@/lib/admin-audit";
+import { getStatConsistencyError } from "@/lib/stat-validation";
 
 const nullableStat = (max: number) => z.number().int().min(0).max(max).nullable();
 const schema = z.object({
@@ -27,6 +28,8 @@ const schema = z.object({
 export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Check the manually entered statistics." }, { status: 400 });
+  const consistencyError = getStatConsistencyError(parsed.data.stats);
+  if (consistencyError) return NextResponse.json({ error: consistencyError }, { status: 400 });
 
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
@@ -61,6 +64,7 @@ export async function POST(request: Request) {
     confidence: "High",
     updated_at: new Date().toISOString()
   };
+  if (!existing) Object.assign(values, { submitted_values: parsed.data.stats });
   const result = existing
     ? await supabase.from("stats").update(values).eq("id", existing.id).select("*").single()
     : await supabase.from("stats").insert(values).select("*").single();

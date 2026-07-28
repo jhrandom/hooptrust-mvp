@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { getStatConsistencyError } from "@/lib/stat-validation";
+import { validateEvidenceUrl } from "@/lib/media-url";
 
 const optionalNumber = z.number().int().min(0).max(999).nullable();
 const updateSchema = z.object({
@@ -23,14 +25,18 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { id } = await params;
   const parsed = updateSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Check the video URL and statistics." }, { status: 400 });
+  const videoUrlError = validateEvidenceUrl(parsed.data.videoUrl);
+  if (videoUrlError) return NextResponse.json({ error: videoUrlError }, { status: 400 });
   const result = await context(id);
   if ("error" in result) return result.error;
   const { supabase, video } = result;
   const allowed = ["jersey_number", "points", "rebounds", "assists", "steals", "blocks", "turnovers", "fgm", "fga", "tpm", "tpa", "ftm", "fta", "minutes"];
   const stats = Object.fromEntries(Object.entries(parsed.data.stats).filter(([key]) => allowed.includes(key)));
+  const consistencyError = getStatConsistencyError(stats);
+  if (consistencyError) return NextResponse.json({ error: consistencyError }, { status: 400 });
   const { error: videoError } = await supabase.from("videos").update({ video_url: parsed.data.videoUrl }).eq("id", video.id);
   if (videoError) return NextResponse.json({ error: videoError.message }, { status: 400 });
-  const { error: statsError } = await supabase.from("stats").update({ ...stats, updated_at: new Date().toISOString() }).eq("game_id", video.game_id).eq("player_id", video.player_id);
+  const { error: statsError } = await supabase.from("stats").update({ ...stats, submitted_values: stats, updated_at: new Date().toISOString() }).eq("game_id", video.game_id).eq("player_id", video.player_id);
   if (statsError) return NextResponse.json({ error: statsError.message }, { status: 400 });
   return NextResponse.json({ saved: true });
 }

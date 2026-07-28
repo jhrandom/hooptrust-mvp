@@ -4,13 +4,14 @@ import { requireProfileRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { EvidenceReviewList, type EvidenceRow } from "@/components/EvidenceReviewList";
 import { AdminContactOversight, type AdminContactRow } from "@/components/AdminContactOversight";
+import { DeletionRequestList } from "@/components/DeletionRequestList";
 
 export default async function AdminPage() {
   await requireProfileRole(["admin"], "/admin");
   const supabase = await createClient();
   const { data: pendingRecruiterRows } = await supabase
     .from("recruiters")
-    .select("id, full_name, program, title, email, status")
+    .select("id, full_name, program, title, email, status, organization_website, supporting_document_url")
     .eq("status", "pending")
     .order("created_at", { ascending: true });
   const [
@@ -41,6 +42,11 @@ export default async function AdminPage() {
     .select("id, action, entity_type, entity_id, details, created_at, profiles(full_name)")
     .order("created_at", { ascending: false })
     .limit(30);
+  const { data: deletionRows, error: deletionError } = await supabase
+    .from("deletion_requests")
+    .select("id, reason, status, created_at, profiles(full_name)")
+    .in("status", ["pending", "approved"])
+    .order("created_at");
   const { data: evidenceRows, error: evidenceError } = await supabase
     .from("videos")
     .select("id, player_id, game_id, video_url, approval_status, review_notes, created_at, players(full_name), games(opponent, game_date, tournament)")
@@ -137,6 +143,12 @@ export default async function AdminPage() {
             <tbody className="divide-y divide-line">{(playerRows ?? []).map((player) => <tr key={player.id}><td className="p-3 font-bold text-ink">{player.full_name}</td><td className="p-3 text-muted">{player.school}</td><td className="p-3 text-muted">{player.country}</td><td className="p-3">{player.graduation_year}</td><td className="p-3"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold">{humanize(player.visibility ?? "private")}</span></td><td className="p-3">{player.recruiting_status}</td></tr>)}</tbody>
           </table>
         </div>
+      </section>
+      <section className="mt-8 rounded-3xl border border-red-200 bg-white p-6 shadow-sm">
+        <h2 className="text-xl font-black text-red-800">Account and data deletion requests</h2>
+        <p className="mt-2 text-sm text-muted">Approval records the decision for controlled processing; it does not immediately erase data.</p>
+        {deletionError ? <ErrorNotice message={deletionError.message} /> : null}
+        <div className="mt-5"><DeletionRequestList initialRows={(deletionRows ?? []).map((row) => ({ ...row, profiles: Array.isArray(row.profiles) ? row.profiles[0] ?? null : row.profiles }))} /></div>
       </section>
     </main>
   );

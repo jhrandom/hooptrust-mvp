@@ -20,7 +20,9 @@ export async function PATCH(request: Request) {
   if (profile?.role !== "admin") return NextResponse.json({ error: "Administrator access required." }, { status: 403 });
   const { data, error } = await supabase.from("recruiters").update({
     status: parsed.data.status,
-    verification_notes: parsed.data.notes || null
+    verification_notes: parsed.data.notes || null,
+    verified_at: parsed.data.status === "approved" ? new Date().toISOString() : null,
+    verification_expires_at: parsed.data.status === "approved" ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : null
   }).eq("id", parsed.data.recruiterId).select("id").maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   if (!data) return NextResponse.json({ error: "Recruiter not found." }, { status: 404 });

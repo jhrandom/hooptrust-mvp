@@ -35,6 +35,7 @@ export default async function LoginPage({
         <p className="mt-5 text-sm text-muted">
           Need an account? <Link href="/signup" className="font-semibold text-court">Create one</Link>
         </p>
+        <p className="mt-2 text-sm"><Link href="/forgot-password" className="font-semibold text-court">Forgot password?</Link></p>
       </div>
     </main>
   );

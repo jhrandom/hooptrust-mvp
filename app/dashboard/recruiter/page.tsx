@@ -32,6 +32,8 @@ export default async function RecruiterDashboardPage({
               <Field name="program" label="College or organization" required />
               <Field name="title" label="Title" placeholder="Assistant Coach" />
               <Field name="email" label="Work email" type="email" required />
+              <Field name="organizationWebsite" label="Organization website" type="url" required placeholder="https://college.edu/athletics" />
+              <Field name="supportingDocumentUrl" label="Supporting document URL" type="url" placeholder="Optional staff directory or credential link" />
               <button type="submit" className="rounded-full bg-ink px-5 py-3 font-bold text-white">Submit application</button>
             </form>
           )}

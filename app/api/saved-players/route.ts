@@ -11,6 +11,8 @@ export async function POST(request: Request) {
   const { data: claims } = await supabase.auth.getClaims();
   const userId = claims?.claims?.sub;
   if (!userId) return NextResponse.json({ error: "Log in to continue." }, { status: 401 });
+  const { data: allowed } = await supabase.rpc("consume_rate_limit", { p_bucket: "save_player", p_limit: 100, p_window_seconds: 86400 });
+  if (!allowed) return NextResponse.json({ error: "Daily saved-player limit reached." }, { status: 429 });
   const { data: recruiter } = await supabase.from("recruiters").select("id, status").eq("user_id", userId).maybeSingle();
   if (!recruiter || recruiter.status !== "approved") return NextResponse.json({ error: "Approved recruiter access required." }, { status: 403 });
   const { error } = await supabase.from("saved_players").upsert({

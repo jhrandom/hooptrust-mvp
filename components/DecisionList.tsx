@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-type RecruiterRow = { id: string; full_name: string; program: string; email: string; status: string; title?: string | null };
+type RecruiterRow = { id: string; full_name: string; program: string; email: string; status: string; title?: string | null; organization_website?: string | null; supporting_document_url?: string | null };
 type ContactRow = { id: string; message: string; status: string; recruiters: { full_name: string; program: string } | null };
 
 export function RecruiterApprovalList({ initialRows }: { initialRows: RecruiterRow[] }) {
@@ -16,6 +16,8 @@ function RecruiterReviewCard({ row, onDone }: { row: RecruiterRow; onDone: () =>
     <div className="rounded-2xl border border-line p-4">
       <p className="font-bold text-ink">{row.full_name}</p>
       <p className="text-sm text-muted">{row.title ? `${row.title} · ` : ""}{row.program} · {row.email}</p>
+      {row.organization_website ? <a href={row.organization_website} target="_blank" rel="noreferrer" className="mt-2 block text-sm font-bold text-court">Organization website</a> : null}
+      {row.supporting_document_url ? <a href={row.supporting_document_url} target="_blank" rel="noreferrer" className="mt-1 block text-sm font-bold text-court">Supporting credential</a> : null}
       <textarea value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={1000} placeholder="Verification notes or rejection reason…" className="mt-3 min-h-20 w-full rounded-xl border border-line px-3 py-2 text-sm" />
       <div className="mt-3 flex gap-2"><Action onClick={() => decide("/api/recruiters", { recruiterId: row.id, status: "approved", notes }, onDone)}>Approve</Action><Action onClick={() => decide("/api/recruiters", { recruiterId: row.id, status: "rejected", notes }, onDone)}>Reject</Action></div>
     </div>

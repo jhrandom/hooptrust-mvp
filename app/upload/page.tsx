@@ -36,6 +36,10 @@ export default async function UploadPage({
               <input name="opponent" className="rounded-2xl border border-line px-4 py-3 font-normal" placeholder="KIS Dragons" />
             </label>
           </div>
+          <label className="grid gap-2 text-sm font-semibold text-ink">
+            Team for this game
+            <input name="teamName" className="rounded-2xl border border-line px-4 py-3 font-normal" placeholder="SJA Jeju Varsity" />
+          </label>
           <div className="grid gap-5 md:grid-cols-2">
             <label className="grid gap-2 text-sm font-semibold text-ink">
               Tournament / League

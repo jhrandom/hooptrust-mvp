@@ -1,7 +1,9 @@
-import { savePlayerProfile } from "@/app/forms/actions";
+import { addCoachReference, addPlayerTeam, linkGuardian, savePlayerProfile } from "@/app/forms/actions";
 import { requireProfileRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PortalBackLink } from "@/components/PortalBackLink";
+import { ProfilePhotoUpload } from "@/components/ProfilePhotoUpload";
+import { VisibilitySelect } from "@/components/VisibilitySelect";
 
 export default async function ProfilePage({
   searchParams
@@ -19,6 +21,11 @@ export default async function ProfilePage({
   const { data: contact } = profile
     ? await supabase.from("player_contact_details").select("*").eq("player_id", profile.id).maybeSingle()
     : { data: null };
+  const [{ data: coachReferences }, { data: teams }, { data: guardianLinks }] = profile ? await Promise.all([
+    supabase.from("coach_references").select("id, coach_name, organization, relationship").eq("player_id", profile.id),
+    supabase.from("player_teams").select("id, team_name, season, role").eq("player_id", profile.id),
+    supabase.from("guardian_player_links").select("guardian_user_id, status, profiles(full_name)").eq("player_id", profile.id)
+  ]) : [{ data: [] }, { data: [] }, { data: [] }];
 
   return (
     <main className="container-page py-10">
@@ -42,6 +49,7 @@ export default async function ProfilePage({
               Position <RequiredMark />
             </legend>
             <p className="mt-1 text-xs text-muted">Select every position you play.</p>
+            {!profile?.position ? <p className="mt-1 text-xs font-bold text-red-600">Required to complete your profile.</p> : null}
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
               {["PG", "SG", "SF", "PF", "C"].map((position) => {
                 const selectedPositions = String(profile?.position ?? "").split("/").map((item) => item.trim());
@@ -56,6 +64,8 @@ export default async function ProfilePage({
           </fieldset>
           <Field label="Height" name="height" required placeholder={'6\'1"'} defaultValue={profile?.height} />
           <Field label="Weight" name="weight" required placeholder="165 lb" defaultValue={profile?.weight} />
+          <Field label="Height (cm)" name="heightCm" type="number" required defaultValue={profile?.height_cm} />
+          <Field label="Weight (kg)" name="weightKg" type="number" required defaultValue={profile?.weight_kg} />
           <label className="grid gap-2 text-sm font-semibold text-ink">
             <span>Dominant hand <RequiredMark /></span>
             <select name="dominantHand" required defaultValue={profile?.dominant_hand ?? ""} className="rounded-2xl border border-line px-4 py-3 font-normal">
@@ -64,11 +74,12 @@ export default async function ProfilePage({
               <option value="Left">Left</option>
               <option value="Both">Both / Ambidextrous</option>
             </select>
+            {!profile?.dominant_hand ? <span className="text-xs font-bold text-red-600">Required to complete your profile.</span> : null}
           </label>
           <Field label="Jersey number" name="jerseyNumber" type="number" defaultValue={profile?.jersey_number} />
           <Field label="GPA" name="gpa" defaultValue={profile?.gpa} />
           <Field label="Intended major" name="intendedMajor" defaultValue={profile?.intended_major} />
-          <Field label="Profile photo URL" name="profilePhotoUrl" type="url" placeholder="https://…" defaultValue={profile?.profile_photo_url} />
+          <ProfilePhotoUpload initialUrl={profile?.profile_photo_url} />
           <label className="grid gap-2 text-sm font-semibold text-ink">
             Recruiting status
             <select name="recruitingStatus" defaultValue={profile?.recruiting_status ?? "Open"} className="rounded-2xl border border-line px-4 py-3 font-normal">
@@ -79,14 +90,7 @@ export default async function ProfilePage({
             Bio
             <textarea name="bio" maxLength={1000} defaultValue={profile?.bio ?? ""} className="min-h-32 rounded-2xl border border-line px-4 py-3 font-normal" />
           </label>
-          <label className="grid gap-2 text-sm font-semibold text-ink">
-            Visibility
-            <select name="visibility" defaultValue={profile?.visibility ?? "private"} className="rounded-2xl border border-line px-4 py-3 font-normal">
-              <option value="private">Private</option>
-              <option value="recruiter_visible">Approved recruiters</option>
-              <option value="public">Public</option>
-            </select>
-          </label>
+          <VisibilitySelect initialValue={profile?.visibility ?? "private"} />
           <section className="rounded-3xl border border-line bg-slate-50 p-5 md:col-span-2">
             <h2 className="text-lg font-black text-ink">Designated contact for approved recruiters</h2>
             <p className="mt-2 text-sm leading-6 text-muted">
@@ -107,6 +111,11 @@ export default async function ProfilePage({
             <button type="submit" className="w-full rounded-full bg-court px-5 py-3 font-bold text-white">Save profile</button>
           </div>
         </form>
+        {profile ? <div className="mt-8 grid gap-6 lg:grid-cols-3">
+          <section className="rounded-3xl border border-line p-5"><h2 className="font-black text-ink">Guardian link</h2><div className="mt-3 space-y-2">{(guardianLinks ?? []).map((link) => { const guardian = Array.isArray(link.profiles) ? link.profiles[0] : link.profiles; return <p key={link.guardian_user_id} className="text-sm text-muted">{guardian?.full_name ?? "Guardian"} · {link.status}</p>; })}</div><form action={linkGuardian} className="mt-4 grid gap-2"><input name="guardianEmail" type="email" required placeholder="Guardian account email" className="rounded-xl border border-line px-3 py-2" /><button className="rounded-full bg-ink px-3 py-2 text-sm font-bold text-white">Link guardian</button></form></section>
+          <section className="rounded-3xl border border-line p-5"><h2 className="font-black text-ink">Coach references</h2><div className="mt-3 space-y-2">{(coachReferences ?? []).map((coach) => <p key={coach.id} className="text-sm text-muted">{coach.coach_name} · {coach.organization}</p>)}</div><form action={addCoachReference} className="mt-4 grid gap-2"><input name="coachName" required placeholder="Coach name" className="rounded-xl border border-line px-3 py-2" /><input name="coachOrganization" placeholder="Organization" className="rounded-xl border border-line px-3 py-2" /><input name="coachEmail" type="email" required placeholder="Coach email" className="rounded-xl border border-line px-3 py-2" /><input name="coachRelationship" placeholder="Relationship" className="rounded-xl border border-line px-3 py-2" /><label className="text-xs text-muted"><input name="coachConsent" type="checkbox" required className="mr-2" />Coach consent confirmed</label><button className="rounded-full bg-ink px-3 py-2 text-sm font-bold text-white">Add reference</button></form></section>
+          <section className="rounded-3xl border border-line p-5"><h2 className="font-black text-ink">Teams and seasons</h2><div className="mt-3 space-y-2">{(teams ?? []).map((team) => <p key={team.id} className="text-sm text-muted">{team.team_name} · {team.season}</p>)}</div><form action={addPlayerTeam} className="mt-4 grid gap-2"><input name="teamName" required placeholder="Team" className="rounded-xl border border-line px-3 py-2" /><input name="season" required placeholder="2026–27" className="rounded-xl border border-line px-3 py-2" /><input name="teamRole" placeholder="Varsity / captain" className="rounded-xl border border-line px-3 py-2" /><button className="rounded-full bg-ink px-3 py-2 text-sm font-bold text-white">Add team</button></form></section>
+        </div> : null}
       </div>
     </main>
   );
@@ -119,6 +128,7 @@ function Field({ label, name, type = "text", defaultValue, placeholder, required
     <label className="grid gap-2 text-sm font-semibold text-ink">
       <span>{label} {required ? <RequiredMark /> : null}</span>
       <input name={name} type={type} required={required} defaultValue={defaultValue ?? ""} placeholder={placeholder} className="rounded-2xl border border-line px-4 py-3 font-normal" />
+      {required && !defaultValue ? <span className="text-xs font-bold text-red-600">Required to complete your profile.</span> : null}
     </label>
   );
 }

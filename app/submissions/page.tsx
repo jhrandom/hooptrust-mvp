@@ -9,7 +9,7 @@ export default async function SubmissionsPage() {
   const supabase = await createClient();
   const { data: player } = await supabase.from("players").select("id").eq("user_id", auth!.userId).maybeSingle();
   const { data: videos } = player
-    ? await supabase.from("videos").select("id, game_id, video_url, approval_status, review_notes, games(opponent, game_date)").eq("player_id", player.id).order("created_at", { ascending: false })
+    ? await supabase.from("videos").select("id, game_id, video_url, approval_status, review_notes, is_highlight, highlight_order, games(opponent, game_date)").eq("player_id", player.id).order("created_at", { ascending: false })
     : { data: [] };
   const gameIds = (videos ?? []).map((video) => video.game_id).filter((id): id is string => Boolean(id));
   const { data: stats } = gameIds.length

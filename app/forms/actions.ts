@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { getStatConsistencyError } from "@/lib/stat-validation";
+import { validateEvidenceUrl } from "@/lib/media-url";
 
 const optionalText = (max: number) =>
   z.preprocess((value) => value === "" ? null : value, z.string().trim().max(max).nullable());
@@ -25,6 +27,8 @@ const playerSchema = z.object({
   position: z.string().trim().min(1).max(40),
   height: z.string().trim().min(1).max(30),
   weight: z.string().trim().min(1).max(30),
+  heightCm: z.coerce.number().min(100).max(260),
+  weightKg: z.coerce.number().min(30).max(250),
   dominantHand: z.enum(["Right", "Left", "Both"]),
   currentTeam: optionalText(120),
   jerseyNumber: z.coerce.number().int().min(0).max(999).nullable(),
@@ -40,6 +44,7 @@ const evidenceSchema = z.object({
   videoUrl: z.string().url().max(2000),
   gameDate: z.string().date(),
   opponent: optionalText(120),
+  teamName: optionalText(120),
   location: optionalText(150),
   tournament: optionalText(150),
   finalScore: optionalText(40),
@@ -63,7 +68,9 @@ const recruiterSchema = z.object({
   fullName: z.string().trim().min(2).max(100),
   program: z.string().trim().min(2).max(150),
   title: optionalText(100),
-  email: z.string().email().max(320)
+  email: z.string().email().max(320),
+  organizationWebsite: z.string().url().max(2000),
+  supportingDocumentUrl: z.preprocess((value) => value === "" ? null : value, z.string().url().max(2000).nullable())
 });
 
 const contactDetailsSchema = z.object({
@@ -78,7 +85,8 @@ const scheduleSchema = z.object({
   opponent: optionalText(120),
   eventDate: z.string().min(1).refine((value) => !Number.isNaN(Date.parse(value))).transform((value) => new Date(value).toISOString()),
   location: optionalText(150),
-  notes: optionalText(500)
+  notes: optionalText(500),
+  timezone: z.string().trim().min(1).max(100)
 });
 
 function value(formData: FormData, key: string) {
@@ -121,6 +129,8 @@ export async function savePlayerProfile(formData: FormData) {
     position: formData.getAll("position").map(String).join(" / "),
     height: value(formData, "height"),
     weight: value(formData, "weight"),
+    heightCm: value(formData, "heightCm"),
+    weightKg: value(formData, "weightKg"),
     dominantHand: value(formData, "dominantHand"),
     currentTeam: value(formData, "currentTeam"),
     jerseyNumber: optionalNumberValue(formData, "jerseyNumber"),
@@ -147,6 +157,8 @@ export async function savePlayerProfile(formData: FormData) {
     position: profile.position,
     height: profile.height,
     weight: profile.weight,
+    height_cm: profile.heightCm,
+    weight_kg: profile.weightKg,
     dominant_hand: profile.dominantHand,
     current_team: profile.currentTeam,
     jersey_number: profile.jerseyNumber,
@@ -195,6 +207,7 @@ export async function submitEvidence(formData: FormData) {
     videoUrl: value(formData, "videoUrl"),
     gameDate: value(formData, "gameDate"),
     opponent: value(formData, "opponent"),
+    teamName: value(formData, "teamName"),
     location: value(formData, "location"),
     tournament: value(formData, "tournament"),
     finalScore: value(formData, "finalScore"),
@@ -214,54 +227,29 @@ export async function submitEvidence(formData: FormData) {
     ftm: value(formData, "ftm")
   });
   if (!parsed.success) withNotice("/upload", "error", "Enter a valid video URL, game date, and jersey number.");
+  const videoUrlError = validateEvidenceUrl(parsed.data.videoUrl);
+  if (videoUrlError) withNotice("/upload", "error", videoUrlError);
+  const statError = getStatConsistencyError(parsed.data);
+  if (statError) withNotice("/upload", "error", statError);
 
   const { supabase, userId } = await requireRole(["player", "guardian"]);
   const { data: player } = await supabase.from("players").select("id").eq("user_id", userId).maybeSingle();
   if (!player) withNotice("/profile", "error", "Create your player profile before submitting game evidence.");
-
-  const { data: game, error: gameError } = await supabase.from("games").insert({
-    submitted_by: userId,
-    opponent: parsed.data.opponent,
-    game_date: parsed.data.gameDate,
-    location: parsed.data.location,
-    final_score: parsed.data.finalScore,
-    tournament: parsed.data.tournament,
-    approval_status: "pending"
-  }).select("id").single();
-  if (gameError) withNotice("/upload", "error", gameError.message);
-
-  const { error: videoError } = await supabase.from("videos").insert({
-    uploaded_by: userId,
-    player_id: player.id,
-    game_id: game.id,
-    video_url: parsed.data.videoUrl,
-    visibility: "private",
-    approval_status: "pending"
+  const submittedStats = {
+    jersey_number: parsed.data.jerseyNumber, points: parsed.data.points, rebounds: parsed.data.rebounds,
+    assists: parsed.data.assists, steals: parsed.data.steals, blocks: parsed.data.blocks,
+    turnovers: parsed.data.turnovers, minutes: parsed.data.minutes, fga: parsed.data.fga,
+    fgm: parsed.data.fgm, tpa: parsed.data.tpa, tpm: parsed.data.tpm, fta: parsed.data.fta, ftm: parsed.data.ftm
+  };
+  const { data: allowed } = await supabase.rpc("consume_rate_limit", { p_bucket: "evidence_upload", p_limit: 10, p_window_seconds: 3600 });
+  if (!allowed) withNotice("/upload", "error", "Too many submissions. Try again later.");
+  const { error: submissionError } = await supabase.rpc("submit_game_evidence", {
+    p_video_url: parsed.data.videoUrl, p_game_date: parsed.data.gameDate,
+    p_opponent: parsed.data.opponent, p_team_name: parsed.data.teamName,
+    p_location: parsed.data.location, p_tournament: parsed.data.tournament,
+    p_final_score: parsed.data.finalScore, p_stats: submittedStats
   });
-  if (videoError) withNotice("/upload", "error", videoError.message);
-
-  const { error: statsError } = await supabase.from("stats").insert({
-    player_id: player.id,
-    game_id: game.id,
-    jersey_number: parsed.data.jerseyNumber,
-    points: parsed.data.points,
-    rebounds: parsed.data.rebounds,
-    assists: parsed.data.assists,
-    steals: parsed.data.steals,
-    blocks: parsed.data.blocks,
-    turnovers: parsed.data.turnovers,
-    minutes: parsed.data.minutes,
-    fga: parsed.data.fga,
-    fgm: parsed.data.fgm,
-    tpa: parsed.data.tpa,
-    tpm: parsed.data.tpm,
-    fta: parsed.data.fta,
-    ftm: parsed.data.ftm,
-    source: "manual",
-    verification_status: "pending",
-    confidence: "Medium"
-  });
-  if (statsError) withNotice("/upload", "error", statsError.message);
+  if (submissionError) withNotice("/upload", "error", submissionError.message);
 
   revalidatePath("/dashboard/player");
   withNotice("/upload", "message", "Game evidence submitted for review.");
@@ -272,7 +260,9 @@ export async function submitRecruiterApplication(formData: FormData) {
     fullName: value(formData, "fullName"),
     program: value(formData, "program"),
     title: value(formData, "title"),
-    email: value(formData, "email")
+    email: value(formData, "email"),
+    organizationWebsite: value(formData, "organizationWebsite"),
+    supportingDocumentUrl: value(formData, "supportingDocumentUrl")
   });
   if (!parsed.success) withNotice("/dashboard/recruiter", "error", "Complete the recruiter application with a valid email.");
 
@@ -283,6 +273,9 @@ export async function submitRecruiterApplication(formData: FormData) {
     program: parsed.data.program,
     title: parsed.data.title,
     email: parsed.data.email,
+    institutional_email: parsed.data.email,
+    organization_website: parsed.data.organizationWebsite,
+    supporting_document_url: parsed.data.supportingDocumentUrl,
     status: "pending"
   }, { onConflict: "user_id" });
   if (error) withNotice("/dashboard/recruiter", "error", error.message);
@@ -297,7 +290,8 @@ export async function addScheduleEvent(formData: FormData) {
     opponent: value(formData, "opponent"),
     eventDate: value(formData, "eventDate"),
     location: value(formData, "location"),
-    notes: value(formData, "notes")
+    notes: value(formData, "notes"),
+    timezone: value(formData, "timezone")
   });
   if (!parsed.success) withNotice("/schedule", "error", "Enter an event name and valid date.");
   const { supabase, userId } = await requireRole(["player", "guardian"]);
@@ -309,7 +303,8 @@ export async function addScheduleEvent(formData: FormData) {
     opponent: parsed.data.opponent,
     event_date: parsed.data.eventDate,
     location: parsed.data.location,
-    notes: parsed.data.notes
+    notes: parsed.data.notes,
+    timezone: parsed.data.timezone
   });
   if (error) withNotice("/schedule", "error", error.message);
   revalidatePath("/schedule");
@@ -336,4 +331,40 @@ export async function requestAccountDeletion(formData: FormData) {
   const { error } = await supabase.from("deletion_requests").insert({ user_id: userId, reason: reason.data || null });
   if (error) withNotice("/settings", "error", error.message);
   withNotice("/settings", "message", "Account and data deletion request submitted.");
+}
+
+export async function linkGuardian(formData: FormData) {
+  const email = z.string().email().safeParse(value(formData, "guardianEmail"));
+  if (!email.success) withNotice("/profile", "error", "Enter the guardian account email.");
+  const { supabase, userId } = await requireRole(["player"]);
+  const { data: player } = await supabase.from("players").select("id").eq("user_id", userId).maybeSingle();
+  if (!player) withNotice("/profile", "error", "Create the player profile first.");
+  const { error } = await supabase.rpc("link_guardian_by_email", { p_player_id: player.id, p_email: email.data });
+  if (error) withNotice("/profile", "error", error.message);
+  withNotice("/profile", "message", "Guardian account linked.");
+}
+
+export async function addCoachReference(formData: FormData) {
+  const parsed = z.object({
+    coachName: z.string().trim().min(2).max(100), organization: optionalText(150),
+    email: z.string().email(), relationship: optionalText(100), consent: z.literal("on")
+  }).safeParse({ coachName: value(formData, "coachName"), organization: value(formData, "coachOrganization"), email: value(formData, "coachEmail"), relationship: value(formData, "coachRelationship"), consent: value(formData, "coachConsent") });
+  if (!parsed.success) withNotice("/profile", "error", "Complete the coach reference and confirm consent.");
+  const { supabase, userId } = await requireRole(["player", "guardian"]);
+  const { data: player } = await supabase.from("players").select("id").eq("user_id", userId).maybeSingle();
+  if (!player) withNotice("/profile", "error", "Create the player profile first.");
+  const { error } = await supabase.from("coach_references").insert({ player_id: player.id, coach_name: parsed.data.coachName, organization: parsed.data.organization, email: parsed.data.email, relationship: parsed.data.relationship, consent_confirmed: true });
+  if (error) withNotice("/profile", "error", error.message);
+  withNotice("/profile", "message", "Coach reference added.");
+}
+
+export async function addPlayerTeam(formData: FormData) {
+  const parsed = z.object({ teamName: z.string().trim().min(2).max(150), season: z.string().trim().min(2).max(50), role: optionalText(100) }).safeParse({ teamName: value(formData, "teamName"), season: value(formData, "season"), role: value(formData, "teamRole") });
+  if (!parsed.success) withNotice("/profile", "error", "Enter a team and season.");
+  const { supabase, userId } = await requireRole(["player", "guardian"]);
+  const { data: player } = await supabase.from("players").select("id").eq("user_id", userId).maybeSingle();
+  if (!player) withNotice("/profile", "error", "Create the player profile first.");
+  const { error } = await supabase.from("player_teams").insert({ player_id: player.id, team_name: parsed.data.teamName, season: parsed.data.season, role: parsed.data.role });
+  if (error) withNotice("/profile", "error", error.message);
+  withNotice("/profile", "message", "Team season added.");
 }

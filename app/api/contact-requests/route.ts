@@ -15,6 +15,8 @@ export async function POST(request: Request) {
   const { data: claims } = await supabase.auth.getClaims();
   const userId = claims?.claims?.sub;
   if (!userId) return NextResponse.json({ error: "Log in to continue." }, { status: 401 });
+  const { data: allowed } = await supabase.rpc("consume_rate_limit", { p_bucket: "contact_request", p_limit: 10, p_window_seconds: 86400 });
+  if (!allowed) return NextResponse.json({ error: "Contact-request limit reached. Try again tomorrow." }, { status: 429 });
 
   const { data: recruiter } = await supabase
     .from("recruiters")
