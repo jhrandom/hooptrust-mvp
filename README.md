@@ -80,7 +80,6 @@ The integration requests only `playlist-modify-private`. Spotify tokens are encr
 - `/rhythm` — HoopTrust Rhythm private Spotify playlist builder
 - `/players/tyler-kim` — Sample recruiter-ready player profile
 - `/upload` — Game/video upload shell
-- `/verify-stats` — Stat verification queue
 - `/admin` — Admin dashboard
 
 ## Project structure

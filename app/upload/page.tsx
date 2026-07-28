@@ -1,6 +1,7 @@
 import { submitEvidence } from "@/app/forms/actions";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import { PortalBackLink } from "@/components/PortalBackLink";
+import { StatSubmissionFields } from "@/components/StatSubmissionFields";
 
 export default async function UploadPage({
   searchParams
@@ -53,34 +54,10 @@ export default async function UploadPage({
             <span>Player&apos;s jersey number <span className="text-red-600" aria-label="required">*</span></span>
             <input name="jerseyNumber" type="number" min="0" max="999" required className="rounded-2xl border border-line px-4 py-3 font-normal" placeholder="11" />
           </label>
-          <fieldset>
-            <legend className="text-sm font-semibold text-ink">Your stat line</legend>
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <StatInput name="points" label="Points" />
-              <StatInput name="rebounds" label="Rebounds" />
-              <StatInput name="assists" label="Assists" />
-              <StatInput name="steals" label="Steals" />
-              <StatInput name="blocks" label="Blocks" />
-              <StatInput name="turnovers" label="Turnovers" />
-              <StatInput name="fga" label="Field goal attempts" />
-              <StatInput name="fgm" label="Field goals made" />
-              <StatInput name="tpa" label="Three-point attempts" />
-              <StatInput name="tpm" label="Three-pointers made" />
-              <StatInput name="fta" label="Free throw attempts" />
-              <StatInput name="ftm" label="Free throws made" />
-              <StatInput name="minutes" label="Minutes" />
-            </div>
-            <p className="mt-3 text-sm text-muted">
-              Not sure about your exact stat? Leave the box empty, and we will check it for you.
-            </p>
-          </fieldset>
+          <StatSubmissionFields />
           <button type="submit" className="rounded-full bg-court px-5 py-3 font-bold text-white">Submit for review</button>
         </form>
       </div>
     </main>
   );
-}
-
-function StatInput({ name, label }: { name: string; label: string }) {
-  return <label className="grid gap-1 text-xs font-semibold text-muted">{label}<input name={name} type="number" min="0" className="rounded-xl border border-line px-3 py-2 text-ink" /></label>;
 }

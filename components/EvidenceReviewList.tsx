@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ExternalLink } from "lucide-react";
+import { calculateExpectedPoints } from "./StatSubmissionFields";
 
 export type EvidenceRow = {
   id: string;
@@ -118,6 +119,12 @@ function ManualStatsEditor({ videoId, stats, onSaved }: {
 }) {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [calculationValues, setCalculationValues] = useState<Record<string, string>>({
+    points: stats?.points?.toString() ?? "",
+    fgm: stats?.fgm?.toString() ?? "",
+    tpm: stats?.tpm?.toString() ?? "",
+    ftm: stats?.ftm?.toString() ?? ""
+  });
   const fields: Array<[keyof NonNullable<EvidenceRow["stats"]>, string, number]> = [
     ["jersey_number", "Jersey", 999], ["points", "Points", 300], ["rebounds", "Rebounds", 100],
     ["assists", "Assists", 100], ["steals", "Steals", 100], ["blocks", "Blocks", 100],
@@ -125,6 +132,9 @@ function ManualStatsEditor({ videoId, stats, onSaved }: {
     ["tpm", "3PT made", 300], ["tpa", "3PT attempts", 300], ["ftm", "FT made", 300],
     ["fta", "FT attempts", 300], ["minutes", "Minutes", 200]
   ];
+  const expectedPoints = calculateExpectedPoints(calculationValues.fgm, calculationValues.tpm, calculationValues.ftm);
+  const enteredPoints = calculationValues.points === "" ? null : Number(calculationValues.points);
+  const mismatch = expectedPoints !== null && enteredPoints !== null && expectedPoints !== enteredPoints;
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -160,9 +170,25 @@ function ManualStatsEditor({ videoId, stats, onSaved }: {
           {fields.map(([name, label, max]) => (
             <label key={name} className="grid gap-1 text-xs font-bold text-muted">
               {label}
-              <input name={name} type="number" min="0" max={max} defaultValue={stats?.[name] ?? ""} className="rounded-xl border border-line px-3 py-2 text-ink" />
+              <input
+                name={name}
+                type="number"
+                min="0"
+                max={max}
+                defaultValue={stats?.[name] ?? ""}
+                onChange={name === "points" || name === "fgm" || name === "tpm" || name === "ftm"
+                  ? (event) => setCalculationValues((current) => ({ ...current, [name]: event.target.value }))
+                  : undefined}
+                className="rounded-xl border border-line px-3 py-2 text-ink"
+              />
             </label>
           ))}
+        </div>
+        <div className={`mt-4 rounded-2xl border p-4 ${mismatch ? "border-orange-300 bg-orange-50" : "border-green-200 bg-green-50"}`}>
+          <p className="text-xs font-bold uppercase tracking-wide text-muted">Expected points from shooting</p>
+          <p className="mt-1 text-2xl font-black text-ink">{expectedPoints ?? "—"}</p>
+          <p className="mt-1 text-xs text-muted">2 × FGM + 3PM + FTM</p>
+          {mismatch ? <p className="mt-2 text-sm font-bold text-orange-800">Entered points ({enteredPoints}) differ from the calculated total ({expectedPoints}).</p> : null}
         </div>
         <button type="submit" disabled={saving} className="mt-4 rounded-full bg-court px-5 py-3 text-sm font-bold text-white disabled:opacity-50">
           {saving ? "Saving…" : "Save and verify stats"}

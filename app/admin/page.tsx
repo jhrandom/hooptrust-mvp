@@ -3,7 +3,6 @@ import { RecruiterApprovalList } from "@/components/DecisionList";
 import { requireProfileRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { EvidenceReviewList, type EvidenceRow } from "@/components/EvidenceReviewList";
-import { StatReviewTable } from "@/components/StatReviewTable";
 import { AdminContactOversight, type AdminContactRow } from "@/components/AdminContactOversight";
 
 export default async function AdminPage() {
@@ -27,11 +26,6 @@ export default async function AdminPage() {
     supabase.from("contact_requests").select("*", { count: "exact", head: true }),
     supabase.from("videos").select("*", { count: "exact", head: true })
   ]);
-  const { data: statRows, error: statError } = await supabase
-    .from("stats")
-    .select("id, points, rebounds, assists, source, verification_status, players(full_name), games(opponent)")
-    .order("created_at", { ascending: false })
-    .limit(50);
   const { data: contactRows, error: contactError } = await supabase
     .from("contact_requests")
     .select("id, message, status, created_at, recruiters(full_name, program, email), players(full_name)")
@@ -85,16 +79,7 @@ export default async function AdminPage() {
         })) as EvidenceRow[]} />
       </section>
 
-      <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
-        <div>
-          <h2 className="mb-4 text-xl font-black text-ink">Stat verification queue</h2>
-          {statError ? <ErrorNotice message={statError.message} /> : null}
-          <StatReviewTable initialRows={(statRows ?? []).map((row) => ({
-            ...row,
-            players: Array.isArray(row.players) ? row.players[0] ?? null : row.players,
-            games: Array.isArray(row.games) ? row.games[0] ?? null : row.games
-          })) as never[]} />
-        </div>
+      <section className="mt-8">
         <aside className="space-y-4">
           <div className="rounded-3xl border border-line bg-white p-6 shadow-sm">
             <h2 className="text-lg font-black text-ink">Recruiter approvals</h2>
