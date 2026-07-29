@@ -11,7 +11,7 @@ export function PlayerCard({ player }: { player: Player }) {
     <article className="rounded-3xl border border-line bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft">
       <div className="flex gap-4">
         <Image
-          src={player.profilePhotoUrl ?? "https://placehold.co/240x240?text=HT"}
+          src={player.profilePhotoUrl ?? "https://placehold.co/240x240/png?text=HT"}
           alt={`${player.fullName} profile`}
           width={76}
           height={76}

@@ -21,7 +21,7 @@ export const players: Player[] = [
     intendedMajor: "Business / Engineering",
     recruitingStatus: "Open",
     visibility: "recruiter_visible",
-    profilePhotoUrl: "https://placehold.co/240x240?text=TK",
+    profilePhotoUrl: "https://placehold.co/240x240/png?text=TK",
     verificationScore: 92
   },
   {
@@ -44,7 +44,7 @@ export const players: Player[] = [
     intendedMajor: "Economics",
     recruitingStatus: "Open",
     visibility: "recruiter_visible",
-    profilePhotoUrl: "https://placehold.co/240x240?text=MP",
+    profilePhotoUrl: "https://placehold.co/240x240/png?text=MP",
     verificationScore: 86
   },
   {
@@ -67,7 +67,7 @@ export const players: Player[] = [
     intendedMajor: "Sports Management",
     recruitingStatus: "Contacted",
     visibility: "link_only",
-    profilePhotoUrl: "https://placehold.co/240x240?text=DC",
+    profilePhotoUrl: "https://placehold.co/240x240/png?text=DC",
     verificationScore: 78
   }
 ];

@@ -26,6 +26,24 @@ export function getStatConsistencyError(stats: StatValues) {
   return null;
 }
 
+export function calculateExpectedPoints(
+  fgm: string | number | null | undefined,
+  tpm: string | number | null | undefined,
+  ftm: string | number | null | undefined
+) {
+  const fieldGoals = optionalNumber(fgm);
+  const threes = optionalNumber(tpm);
+  const freeThrows = optionalNumber(ftm);
+  if (fieldGoals === null || threes === null || freeThrows === null) return null;
+  return (2 * fieldGoals) + threes + freeThrows;
+}
+
 function numeric(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function optionalNumber(value: string | number | null | undefined) {
+  if (value === "" || value === null || value === undefined) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }

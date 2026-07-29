@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { calculateExpectedPoints } from "@/lib/stat-validation";
 
 const fields = [
   ["points", "Points"], ["rebounds", "Rebounds"], ["assists", "Assists"],
@@ -45,14 +46,6 @@ export function StatSubmissionFields() {
       </p>
     </fieldset>
   );
-}
-
-export function calculateExpectedPoints(fgm: string | number | null | undefined, tpm: string | number | null | undefined, ftm: string | number | null | undefined) {
-  const fieldGoals = toOptionalNumber(fgm);
-  const threes = toOptionalNumber(tpm);
-  const freeThrows = toOptionalNumber(ftm);
-  if (fieldGoals === null || threes === null || freeThrows === null) return null;
-  return (2 * fieldGoals) + threes + freeThrows;
 }
 
 function toOptionalNumber(value: string | number | null | undefined) {

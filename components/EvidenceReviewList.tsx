@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ExternalLink } from "lucide-react";
-import { calculateExpectedPoints } from "./StatSubmissionFields";
+import { calculateExpectedPoints } from "@/lib/stat-validation";
 
 export type EvidenceRow = {
   id: string;

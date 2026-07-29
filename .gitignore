@@ -6,3 +6,6 @@ node_modules.backup
 .vercel
 .tools
 .data
+coverage
+playwright-report
+test-results

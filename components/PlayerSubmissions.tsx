@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { StatBadge } from "./StatBadge";
-import { calculateExpectedPoints } from "./StatSubmissionFields";
+import { calculateExpectedPoints } from "@/lib/stat-validation";
 
 type Submission = {
   id: string;

@@ -10,6 +10,9 @@ export default defineConfig([
     "node_modules/**",
     "node_modules.backup/**",
     ".tools/**",
+    "coverage/**",
+    "playwright-report/**",
+    "test-results/**",
     "next-env.d.ts"
   ])
 ]);
